@@ -6,9 +6,10 @@ export class Key extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    // Chave não cai — é estática no espaço
+    // Chave não cai e não se move pela física — o tween controla a posição
     this.body.setAllowGravity(false);
     this.body.setImmovable(true);
+    this.body.moves = false;  // impede a física de sobrescrever o tween (corrige flickering)
     this.setTint(0xf1c40f);  // amarelo dourado
 
     // Animação de "flutuar" com tween
