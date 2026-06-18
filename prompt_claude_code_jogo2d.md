@@ -101,10 +101,10 @@ Pare aqui e me mostre como rodar. Vamos validar antes de seguir.
 
 ### Conteúdo de referência (para quando formos detalhar)
 - **Personagens e habilidades (ajustável):**
-  1. `[NOME 1]` — corpo a corpo (ataque rápido de curta distância).
-  2. `[NOME 2]` — à distância (projétil).
-  3. `[NOME 3]` — poder de área (dano/efeito em volta).
-  4. `[NOME 4]` — mobilidade/defesa (dash ou escudo temporário).
+  1. `Hugo` — corpo a corpo (ataque rápido de curta distância).
+  2. `Alex` — à distância (projétil).
+  3. `Berto` — poder de área (dano/efeito em volta).
+  4. `Weverton` — mobilidade/defesa (dash ou escudo temporário).
 - **Inimigos por fase (tema: universidade pública, aulas à noite):**
   - Fase 1 (leve/cômico): "Ressaca" (lento, cambaleante), "Trote" (anda em bando).
   - Fase 2 (obscuro): "Sono" (causa lentidão/visão escurecendo ao encostar), "Trabalho em
