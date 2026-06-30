@@ -182,7 +182,6 @@ export class BootScene extends Phaser.Scene {
     // ── Fundos procedurais ──
     this._makeStarBg();
     this._makeCityscape();
-    this._makeLights();
   }
 
   _makeStarBg() {
@@ -227,25 +226,4 @@ export class BootScene extends Phaser.Scene {
     g.destroy();
   }
 
-  _makeLights() {
-    const W = 200, H = 48;
-    const g = this.make.graphics({ x: 0, y: 0, add: false });
-    g.lineStyle(2, 0x4a3a2a, 1);
-    g.beginPath(); g.moveTo(0, 6);
-    for (let x = 0; x <= W; x += 4) {
-      const y = 6 + Math.sin((x / W) * Math.PI) * 16;
-      g.lineTo(x, y);
-    }
-    g.strokePath();
-    const colors = [0xff5a5a, 0xffd24a, 0x5ad1ff, 0x6aff8a, 0xff8ad1];
-    for (let i = 0, x = 16; x < W; x += 28, i++) {
-      const y = 6 + Math.sin((x / W) * Math.PI) * 16;
-      g.fillStyle(colors[i % colors.length], 1);
-      g.fillCircle(x, y + 10, 4);
-      g.fillStyle(0xffffff, 0.5);
-      g.fillCircle(x - 1, y + 9, 1.5);
-    }
-    g.generateTexture('bg_lights', W, H);
-    g.destroy();
-  }
 }

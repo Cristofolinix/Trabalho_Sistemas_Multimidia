@@ -65,11 +65,12 @@ export class AboutScene extends Phaser.Scene {
     this.add.text(rx + 60, y + 36, 'Persegue em alta velocidade.', { fontFamily: FONT, fontSize: '9px', color: '#bdc3c7' });
     y += 100;
 
-    this.add.text(rx, y, 'A FASE 1', { fontFamily: FONT, fontSize: '14px', color: '#f39c12' });
+    this.add.text(rx, y, 'A AVENTURA', { fontFamily: FONT, fontSize: '14px', color: '#f39c12' });
     y += 28;
-    this.add.text(rx, y, 'A CALOURADA: euforia, festas e', { fontFamily: FONT, fontSize: '9px', color: '#ecf0f1' }); y += 20;
-    this.add.text(rx, y, 'novidades. Cores quentes, luzes', { fontFamily: FONT, fontSize: '9px', color: '#ecf0f1' }); y += 20;
-    this.add.text(rx, y, 'de festa e o campus a noite.', { fontFamily: FONT, fontSize: '9px', color: '#ecf0f1' });
+    this.add.text(rx, y, 'Sua jornada na universidade', { fontFamily: FONT, fontSize: '9px', color: '#ecf0f1' }); y += 20;
+    this.add.text(rx, y, 'comeca na maior festa do ano.', { fontFamily: FONT, fontSize: '9px', color: '#ecf0f1' }); y += 20;
+    this.add.text(rx, y, 'Encare os perrengues do campus', { fontFamily: FONT, fontSize: '9px', color: '#ecf0f1' }); y += 20;
+    this.add.text(rx, y, 'e siga em frente, calouro!', { fontFamily: FONT, fontSize: '9px', color: '#ecf0f1' });
 
     // Botão voltar
     const back = this.add.rectangle(W / 2, H - 42, 220, 44, 0x7f8c8d, 0.9)

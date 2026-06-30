@@ -96,7 +96,6 @@ export class Level1Scene extends Phaser.Scene {
     const sx = this.cameras.main.scrollX;
     this.bg.tilePositionX    = sx * 0.10;
     this.cityBg.tilePositionX = sx * 0.30;
-    this.lightsBg.tilePositionX = sx * 0.55;
     this.player.update(delta);
 
     // Atualiza checkpoint sempre que estiver pisando em piso sólido.
@@ -129,9 +128,8 @@ export class Level1Scene extends Phaser.Scene {
     this.cityBg = this.add.tileSprite(0, H - 320, W, 180, 'bg_city')
       .setOrigin(0, 0).setScrollFactor(0).setTileScale(1.4).setDepth(-30);
 
-    // Varal de luzinhas de festa no topo
-    this.lightsBg = this.add.tileSprite(0, 40, W, 48, 'bg_lights')
-      .setOrigin(0, 0).setScrollFactor(0).setDepth(-26);
+    // Canhões de luz varrendo o céu (clima de balada/festa)
+    this._spotlights(W, H);
 
     // Confete caindo (festivo, fixo na tela)
     this.add.particles(0, -10, 'confetti', {
@@ -148,12 +146,36 @@ export class Level1Scene extends Phaser.Scene {
     [[760, 'BEM-VINDOS, CALOUROS!'], [3500, 'CALOURADA 2026'],
      [5600, 'FESTA NO CAMPUS!']].forEach(([x, txt]) => this._banner(x, 150, txt));
 
-    // Postes de luz ao longo do chão
-    [260, 1000, 2150, 2950, 4150, 5400, 6050].forEach(x => this._lamppost(x));
+    // Caixas de som (palco da festa) ao longo do chão
+    [240, 2050, 4050, 6000].forEach(x => this._speaker(x));
 
     // Balões presos em plataformas
     [[470, 480], [908, 280], [2000, 400], [3308, 245],
      [4768, 315], [5900, 560]].forEach(([x, y]) => this._balloon(x, y));
+  }
+
+  // Canhões de luz coloridos varrendo o céu (fixos na tela)
+  _spotlights(W, H) {
+    const beams = [
+      { x: W * 0.15, color: 0xff3a7a, from: -28, to: 18 },
+      { x: W * 0.40, color: 0x3a9bff, from: 22,  to: -20 },
+      { x: W * 0.62, color: 0x6aff8a, from: -18, to: 26 },
+      { x: W * 0.85, color: 0xffd24a, from: 20,  to: -24 },
+    ];
+    beams.forEach((b, i) => {
+      const g = this.add.graphics({ x: b.x, y: H + 10 })
+        .setScrollFactor(0).setDepth(-28).setBlendMode(Phaser.BlendModes.ADD);
+      // cone apontando para cima (apex na base da tela)
+      g.fillStyle(b.color, 0.10);
+      g.fillTriangle(0, 0, -70, -(H + 20), 70, -(H + 20));
+      g.fillStyle(b.color, 0.06);
+      g.fillTriangle(0, 0, -130, -(H + 20), 130, -(H + 20));
+      g.setAngle(b.from);
+      this.tweens.add({
+        targets: g, angle: b.to,
+        duration: 2600 + i * 400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+      });
+    });
   }
 
   _banner(x, y, text) {
@@ -169,15 +191,24 @@ export class Level1Scene extends Phaser.Scene {
     g.lineBetween(x + bg.width / 2, y - 15, x + bg.width / 2 + 30, y - 60);
   }
 
-  _lamppost(x) {
+  // Caixa de som de palco (corpo + cones dos alto-falantes)
+  _speaker(x) {
     const g = this.add.graphics().setDepth(-8);
+    const top = GROUND - 92, w = 44, h = 92;
+    // corpo
+    g.fillStyle(0x1a1a22, 1);
+    g.fillRect(x - w / 2, top, w, h);
     g.fillStyle(0x2c2c3a, 1);
-    g.fillRect(x - 3, GROUND - 130, 6, 130);      // poste
-    g.fillRect(x - 14, GROUND - 134, 28, 8);       // braço
-    g.fillStyle(0xffd27a, 1);
-    g.fillCircle(x, GROUND - 126, 7);              // lâmpada
-    g.fillStyle(0xffd27a, 0.12);
-    g.fillCircle(x, GROUND - 126, 26);             // brilho
+    g.fillRect(x - w / 2 + 3, top + 3, w - 6, h - 6);
+    // alto-falante grande (woofer)
+    g.fillStyle(0x111118, 1); g.fillCircle(x, top + 56, 15);
+    g.fillStyle(0x3a3a48, 1);  g.fillCircle(x, top + 56, 9);
+    g.fillStyle(0x111118, 1);  g.fillCircle(x, top + 56, 3);
+    // tweeter pequeno
+    g.fillStyle(0x111118, 1); g.fillCircle(x, top + 22, 7);
+    g.fillStyle(0x3a3a48, 1);  g.fillCircle(x, top + 22, 4);
+    // luzinha de status
+    g.fillStyle(0x6aff8a, 1); g.fillCircle(x + w / 2 - 6, top + 8, 2);
   }
 
   _balloon(x, y) {
