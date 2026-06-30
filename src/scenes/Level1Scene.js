@@ -50,7 +50,9 @@ export class Level1Scene extends Phaser.Scene {
       right: Phaser.Input.Keyboard.KeyCodes.D,
       up:    Phaser.Input.Keyboard.KeyCodes.W
     });
-    this.player.jumpKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    this.player.jumpKey  = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    this.player.jumpKey2 = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
+    this.player.abilityKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
 
     // Colisão jogador ↔ plataformas
     this.physics.add.collider(this.player, this.platforms);
@@ -113,8 +115,8 @@ export class Level1Scene extends Phaser.Scene {
     });
   }
 
-  update() {
-    this.player.update();
+  update(time, delta) {
+    this.player.update(delta);
 
     // Atualiza inimigos manualmente (runChildUpdate já faz isso, mas garantimos)
     this.enemies.getChildren().forEach(e => e.update());
@@ -219,16 +221,38 @@ export class Level1Scene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(10);
 
+    // Habilidade — canto superior direito
+    this.hudAbility = this.add.text(
+      this.cameras.main.width - 16, 16,
+      `[F] ${CHARACTERS[this.selectedChar].ability.split('—')[0].trim()} ✓`,
+      { ...style, align: 'right' }
+    ).setOrigin(1, 0).setScrollFactor(0).setDepth(10);
+
     // Atualiza vida a cada evento de dano
     this.events.on('playerDied',  () => this._updateHpHUD());
     this.player.on('damage',      () => this._updateHpHUD()); // caso queira emitir no futuro
     // Atualização contínua (polling simples)
     this.time.addEvent({
       delay: 100,
-      callback: this._updateHpHUD,
+      callback: () => {
+        this._updateHpHUD();
+        this._updateAbilityHUD();
+      },
       callbackScope: this,
       loop: true
     });
+  }
+
+  _updateAbilityHUD() {
+    const cd = this.player.abilityCooldown;
+    const charName = CHARACTERS[this.selectedChar].ability.split('—')[0].trim();
+    if (cd > 0) {
+      this.hudAbility.setText(`[F] ${charName} ${(cd / 1000).toFixed(1)}s`);
+      this.hudAbility.setStyle({ fill: '#e74c3c' });
+    } else {
+      this.hudAbility.setText(`[F] ${charName} ✓`);
+      this.hudAbility.setStyle({ fill: '#2ecc71' });
+    }
   }
 
   _updateHpHUD() {
