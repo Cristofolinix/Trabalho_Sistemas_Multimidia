@@ -1,85 +1,59 @@
+import { FONT } from '../config/theme.js';
+
 export class HowToPlayScene extends Phaser.Scene {
   constructor() { super({ key: 'HowToPlayScene' }); }
 
   create() {
-    const W = this.cameras.main.width;
-    const H = this.cameras.main.height;
-
-    // Fundo
+    const W = this.scale.width, H = this.scale.height;
     this.add.rectangle(W / 2, H / 2, W, H, 0x0d1b2a);
-    const line = this.add.graphics();
-    line.lineStyle(2, 0xf1c40f, 0.6);
-    line.lineBetween(40, 60, W - 40, 60);
 
-    // Título
-    this.add.text(W / 2, 32, 'COMO JOGAR', {
-      fontSize: '26px', fill: '#f1c40f', fontStyle: 'bold'
+    this.add.text(W / 2, 44, 'COMO JOGAR', {
+      fontFamily: FONT, fontSize: '26px', color: '#f1c40f'
     }).setOrigin(0.5);
 
-    // Seções
     const sections = [
-      {
-        title: '🕹  CONTROLES',
-        items: [
-          '← → ou A D         Mover',
-          '↑ ou W ou Espaço   Pular',
-          'F                   Usar habilidade especial',
-        ]
-      },
-      {
-        title: '🎯  OBJETIVO',
-        items: [
-          'Colete as 3 CHAVES espalhadas pela fase.',
-          'Evite ou destrua os inimigos.',
-          'Leve as chaves até a PORTA para avançar.',
-        ]
-      },
-      {
-        title: '⚔  PERSONAGENS',
-        items: [
-          'Hugo      — Soco corpo a corpo (F)',
-          'Alex      — Projétil à distância (F)',
-          'Berto     — Onda de área (F)',
-          'Weverton  — Dash de velocidade (F)',
-        ]
-      },
-      {
-        title: '❤  VIDA',
-        items: [
-          'Você começa com 3 corações.',
-          'Encostar em inimigos tira 1 coração.',
-          'Cair nos buracos também tira 1 coração.',
-          'Ao perder tudo, a fase reinicia.',
-        ]
-      },
+      { title: 'CONTROLES', color: '#3498db', items: [
+        'SETAS ou A/D ......... mover',
+        'SETA CIMA / W / ESPACO  pular',
+        'F .................... habilidade especial',
+        'ESC .................. pausar / sair',
+      ]},
+      { title: 'OBJETIVO', color: '#2ecc71', items: [
+        'Colete as 3 CHAVES escondidas pela fase.',
+        'Suba pelas plataformas - elas escondem as chaves.',
+        'Leve as 3 chaves ate a PORTA para vencer.',
+      ]},
+      { title: 'PERIGOS', color: '#e74c3c', items: [
+        'Inimigos: encostar tira 1 coracao.',
+        'Espinhos e buracos: tiram 1 coracao.',
+        'Voce volta ao ultimo ponto seguro ao cair.',
+        'Sem coracoes, a fase reinicia.',
+      ]},
+      { title: 'PERSONAGENS', color: '#f39c12', items: [
+        'Hugo: soco | Alex: tiro',
+        'Berto: onda | Weverton: dash',
+      ]},
     ];
 
-    let yOff = 85;
+    let y = 100;
     sections.forEach(sec => {
-      this.add.text(60, yOff, sec.title, {
-        fontSize: '14px', fill: '#3498db', fontStyle: 'bold'
+      this.add.text(120, y, sec.title, { fontFamily: FONT, fontSize: '14px', color: sec.color });
+      y += 30;
+      sec.items.forEach(it => {
+        this.add.text(150, y, it, { fontFamily: FONT, fontSize: '11px', color: '#ecf0f1' });
+        y += 24;
       });
-      yOff += 22;
-      sec.items.forEach(item => {
-        this.add.text(80, yOff, item, { fontSize: '12px', fill: '#ecf0f1' });
-        yOff += 18;
-      });
-      yOff += 8;
+      y += 14;
     });
 
-    // Botão voltar
-    this._makeBackButton(W / 2, H - 40);
-  }
-
-  _makeBackButton(x, y) {
-    const btn = this.add.rectangle(x, y, 160, 36, 0x7f8c8d, 0.9)
+    const back = this.add.rectangle(W / 2, H - 44, 220, 44, 0x7f8c8d, 0.9)
       .setInteractive({ useHandCursor: true });
-    this.add.text(x, y, '◀  VOLTAR', {
-      fontSize: '14px', fill: '#fff', fontStyle: 'bold'
+    this.add.text(W / 2, H - 44, '< VOLTAR', {
+      fontFamily: FONT, fontSize: '14px', color: '#fff'
     }).setOrigin(0.5);
-
-    btn.on('pointerover',  () => btn.setFillStyle(0x95a5a6, 1));
-    btn.on('pointerout',   () => btn.setFillStyle(0x7f8c8d, 0.9));
-    btn.on('pointerdown',  () => this.scene.start('TitleScene'));
+    back.on('pointerover', () => back.setFillStyle(0x95a5a6, 1));
+    back.on('pointerout',  () => back.setFillStyle(0x7f8c8d, 0.9));
+    back.on('pointerdown', () => this.scene.start('TitleScene'));
+    this.input.keyboard.on('keydown-ESC', () => this.scene.start('TitleScene'));
   }
 }

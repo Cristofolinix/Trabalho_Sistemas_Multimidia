@@ -1,4 +1,73 @@
 import { makeTexture, PAL } from '../utils/pixelArt.js';
+import { CHARACTERS } from '../config/characters.js';
+
+// Template do corpo do jogador (14×20). 'C'/'c' = cor da camisa (varia por personagem).
+const PLAYER_ROWS = [
+  '.....HHHH.....',
+  '....HHHHHH....',
+  '...HHSSSSHH...',
+  '...HSSSSSSH...',
+  '...S0SSSS0S...',
+  '...SSSSSSSS...',
+  '...sSSSSSSs...',
+  '....SSSSSS....',
+  '...CCCCCCCC...',
+  '..CCCCCCCCCC..',
+  '..CcCCCCCCcC..',
+  '..CCCCCCCCCC..',
+  '...CCCCCCCC...',
+  '...CcCCCCcC...',
+  '...CCCCCCCC...',
+  '...PPPPPPPP...',
+  '...PPP..PPP...',
+  '...PP....PP...',
+  '...pp....pp...',
+  '..KKK..KKK....',
+];
+
+// Inimigo Ressaca (zumbi cansado, encurvado) 14×18
+const RESSACA_ROWS = [
+  '.....ZZZZ.....',
+  '....ZZZZZZ....',
+  '...Z0ZZZZ0Z...',   // olheiras escuras
+  '...ZZZZZZZZ...',
+  '...zZZZZZZz...',
+  '....ZZZZZZ....',
+  '...MMMMMMMM...',
+  '..MMMMMMMMMM..',
+  '..MmMMMMMMmM..',
+  '..MMMMMMMMMM..',
+  '...MMMMMMMM...',
+  '...MMMMMMMM...',
+  '...MMM..MMM...',
+  '...MM....MM...',
+  '...mm....mm...',
+  '..000..000....',
+  '..............',
+  '..............',
+];
+
+// Inimigo Trote (calouro com boné) 14×18
+const TROTE_ROWS = [
+  '...TTTTTTTT...',   // boné
+  '..TtTTTTTTtT..',
+  '...SSSSSSSS...',
+  '...S0SSSS0S...',
+  '...SSSSSSSS...',
+  '....SSSSSS....',
+  '...TTTTTTTT...',   // camisa laranja
+  '..TTTTTTTTTT..',
+  '..TtTTTTTTtT..',
+  '..TTTTTTTTTT..',
+  '...TTTTTTTT...',
+  '...TTTTTTTT...',
+  '...PPP..PPP...',
+  '...PP....PP...',
+  '...PP....PP...',
+  '...pp....pp...',
+  '..KKK..KKK....',
+  '..............',
+];
 
 export class BootScene extends Phaser.Scene {
   constructor() { super({ key: 'BootScene' }); }
@@ -8,221 +77,192 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    this.scene.start('TitleScene');
+    // Garante que a fonte pixelada esteja carregada antes de desenhar textos
+    const go = () => this.scene.start('TitleScene');
+    if (document.fonts && document.fonts.load) {
+      Promise.race([
+        document.fonts.load('16px "Press Start 2P"').then(() => document.fonts.ready),
+        new Promise(res => this.time.delayedCall(2500, res))   // timeout de segurança
+      ]).then(go).catch(go);
+    } else {
+      go();
+    }
   }
 
   _makeAllTextures() {
-    // ── Jogador (base — tintado por personagem) ─────────────────────── 8×14, px=4
-    makeTexture(this, 'player_base', 4, [
-      '..SSSS..',
-      '.S0SS0S.',
-      '.SSSSSS.',
-      '..hhhh..',
-      '.pppppp.',
-      'pppppppp',
-      '.pppppp.',
-      '..pp.pp.',
-      '.PP..PP.',
-      '.PP..PP.',
-      '..P..P..',
-    ]);
+    const PX = 3;   // tamanho de cada pixel — sprites nítidos e maiores
 
-    // ── Inimigo Ressaca (zumbi cansado) ─────────────────────────────── 8×12, px=4
-    makeTexture(this, 'enemy_ressaca', 4, [
-      '..ZZZZ..',
-      '.Z0ZZ0Z.',  // olheiras roxas
-      '.MZZZZM.',
-      '..ZZZZ..',
-      '.MMMMMM.',
-      'MMMMMMMM',
-      '.MMMMMM.',
-      '..MM.MM.',
-      '.mm..mm.',
-      '.mm..mm.',
-      '..m..m..',
-    ]);
+    // ── Jogadores: uma textura por personagem (camisa colorida embutida) ──
+    Object.values(CHARACTERS).forEach(c => {
+      const pal = { ...PAL, C: c.color, c: c.colorDark };
+      makeTexture(this, `player_${c.key}`, PX, PLAYER_ROWS, pal);
+    });
 
-    // ── Inimigo Trote (calouro bagunceiro) ──────────────────────────── 8×12, px=4
-    makeTexture(this, 'enemy_trote', 4, [
-      '..SSSS..',
-      '.S0SS0S.',
-      '.SSSSSS.',
-      '..hhhh..',
-      '.TTTTTT.',
-      'TTTTTTTT',
-      '.TTTTTT.',
-      '..TT.TT.',
-      '.tt..tt.',
-      '.tt..tt.',
-      '..t..t..',
-    ]);
+    // ── Inimigos ──────────────────────────────────────────────────────────
+    makeTexture(this, 'enemy_ressaca', PX, RESSACA_ROWS);
+    makeTexture(this, 'enemy_trote',   PX, TROTE_ROWS);
 
-    // ── Chave (pixel art de chave) ───────────────────────────────────── 8×12, px=3
-    makeTexture(this, 'key_sprite', 3, [
-      '..YYY...',
-      '.YYYYY..',
-      '.Y...Y..',
-      '.YYYYY..',
-      '..YYY...',
-      '...Y....',
-      '...Y....',
+    // ── Chave ───────────────────────────────────────────────────────────── 8×11
+    makeTexture(this, 'key_sprite', PX, [
+      '..YYYY..',
+      '.YyyyyY.',
+      '.Yy..yY.',
+      '.Yy..yY.',
+      '.YyyyyY.',
+      '..YYYY..',
       '...YY...',
-      '...Y....',
+      '...YY...',
+      '...YYY..',
+      '...YY...',
+      '...YYY..',
     ]);
 
-    // ── Porta ───────────────────────────────────────────────────────── 10×16, px=4
-    makeTexture(this, 'door_sprite', 4, [
-      '.DDDDDDDD.',
-      'DdddddddD.',
-      'Dd..AA.dD.',
-      'Dd.AAAA.D.',
-      'Dd.A..A.D.',
-      'Dd.AAAA.D.',
-      'Dd..AA.dD.',
-      'DdddddddD.',
-      'Dd......D.',
-      'Dd......D.',
-      'Dd..00..D.',
-      'Dd......D.',
-      'Dd......D.',
-      'DdddddddD.',
-      'DDDDDDDDDD',
-      'DDDDDDDDDD',
+    // ── Porta ───────────────────────────────────────────────────────────── 12×18
+    makeTexture(this, 'door_sprite', PX, [
+      '.NNNNNNNNNN.',
+      'NNNNNNNNNNNN',
+      'NDDDDDDDDDDN',
+      'NDddddddddDN',
+      'NDd.AAAA.dDN',
+      'NDd.AffA.dDN',
+      'NDd.AffA.dDN',
+      'NDd.AAAA.dDN',
+      'NDddddddddDN',
+      'NDd......dDN',
+      'NDd......dDN',
+      'NDd.AA...dDN',
+      'NDd......dDN',
+      'NDddddddddDN',
+      'NDDDDDDDDDDN',
+      'NDDDDDDDDDDN',
+      'NNNNNNNNNNNN',
+      '.NNNNNNNNNN.',
     ]);
 
-    // ── Tile de chão ─────────────────────────────────────────────────── 16×8, px=2
+    // ── Tiles de chão e plataforma (32×32 via grid 16×16, px=2) ───────────
     makeTexture(this, 'floor_tile', 2, [
+      'kkkkkkkkkkkkkkkk',
       'llllllllllllllll',
-      'lLLLLLLLLLLLLLLl',
-      'lL..L....L.....l',
-      'lL..L....L.....l',
-      'lL..............l',
-      'lL..............l',
-      'lLLLLLLLLLLLLLLl',
+      'lLLlLLLlLLlLLLll',
+      'lLLlLLLlLLlLLLll',
       'llllllllllllllll',
-    ]);
+      'lnLLnLLLnLLnLLnl',
+      'lnnLLLnnnLLnnnnl',
+      'lnnnnnnnnnnnnnnl',
+      'lnnnnnnnnnnnnnnl',
+      'lnLnnLLnnLnnLLnl',
+      'lnnnnnLnnnnnnnnl',
+      'lnnnnnnnnnLnnnnl',
+      'lnnnnnnnnnnnnnnl',
+      'lnnLnnnnnnnLnnnl',
+      'lnnnnnnnLnnnnnnl',
+      'llllllllllllllll',
+    ], { ...PAL, n: 0x4a3520 });
 
-    // ── Tile de plataforma ────────────────────────────────────────────── 16×8, px=2
     makeTexture(this, 'platform_tile', 2, [
       'kkkkkkkkkkkkkkkk',
       'kLLLLLLLLLLLLLLk',
-      'kL.L....L......k',
-      'kL..............k',
+      'kLlLlLlLlLlLlLLk',
       'kLLLLLLLLLLLLLLk',
-      'kkkkkkkkkkkkkkkk',
+      'kLlLlLlLlLlLlLLk',
+      'kLLLLLLLLLLLLLLk',
+      'llllllllllllllll',
+      'llllllllllllllll',
     ]);
 
-    // ── Projétil (Alex) ──────────────────────────────────────────────── 6×4, px=3
+    // ── Spikes (armadilha) 8×8 ────────────────────────────────────────────
+    makeTexture(this, 'spike_tile', 4, [
+      '...kk...',
+      '...kk...',
+      '..kLLk..',
+      '..kLLk..',
+      '.kLLLLk.',
+      '.LLLLLL.',
+      'LLLLLLLL',
+      'LLLLLLLL',
+    ]);
+
+    // ── Projétil (Alex) ───────────────────────────────────────────────────
     makeTexture(this, 'projectile', 3, [
-      '..BBB.',
-      '.BBBBB',
-      '.BBBBB',
-      '..BBB.',
-    ]);
+      '.BBB.',
+      'BBBBB',
+      'BBwBB',
+      'BBBBB',
+      '.BBB.',
+    ], { ...PAL, w: 0xaed6f1 });
 
-    // ── Tocha UNEMAT (logo) ─────────────────────────────────────────── 14×22, px=5
-    makeTexture(this, 'unemat_torch', 5, [
-      '....WWWWW.....',
-      '...WWWWWWW....',
-      '..WwWWWWWwW...',
-      '..WwWWWWWwW...',
-      '.WwwWWWWWwwW..',
-      '.WfffFFFFffW..',
-      '..WffFFFFfW...',
-      '..WfFFFFfW....',
-      '...WfFFFW.....',
-      '....WFFW......',
-      '....NNNN......',
-      '...NNNNNN.....',
-      '....NNNN......',
-      '....NNNN......',
-      '....NNNN......',
-      '...NNNNNN.....',
-      '....NNNN......',
-      '....NNNN......',
-      '...nnnnnn.....',
-      '..nnnnnnnn....',
-      '..nnnnnnnn....',
-      '..nnnnnnnn....',
-    ]);
+    // ── Estrela verde (logo UNEMAT) ───────────────────────────────────────
+    const starPal = { X: 0x2e8b3d, x: 0x256d30 };
+    makeTexture(this, 'star_green', 5, [
+      '.......XX.......',
+      '......XXXX......',
+      '......XXXX......',
+      '......XXXX......',
+      'XXXXXXXXXXXXXXXX',
+      '.XXXXXXXXXXXXXX.',
+      '..XXXXXXXXXXXX..',
+      '...XXXXXXXXXX...',
+      '...XXXXXXXXXX...',
+      '..XXXXXXXXXXXX..',
+      '..XXXXX.xXXXXX..',
+      '.XXXX....xXXXX..',
+      '.XXx......xXXX..',
+      '.Xx........xXX..',
+      '.x..........x..',
+    ], starPal);
 
-    // ── Fundo de estrelas (tile 64×64) ───────────────────────────────── px=1
-    this._makeStarBg();
-
-    // Compat: mantém chaves antigas para não quebrar código existente
-    makeTexture(this, 'player_placeholder', 4, [
-      '..SSSS..',
-      '.S0SS0S.',
-      '.SSSSSS.',
-      '..hhhh..',
-      '.pppppp.',
-      'pppppppp',
-      '.pppppp.',
-      '..pp.pp.',
-      '.PP..PP.',
-      '.PP..PP.',
-      '..P..P..',
-    ]);
-    makeTexture(this, 'enemy_placeholder', 4, [
-      '..ZZZZ..',
-      '.Z0ZZ0Z.',
-      '.MZZZZM.',
-      '..ZZZZ..',
-      '.MMMMMM.',
-      'MMMMMMMM',
-      '.MMMMMM.',
-      '..MM.MM.',
-      '.mm..mm.',
-      '.mm..mm.',
-      '..m..m..',
-    ]);
-    makeTexture(this, 'key_placeholder', 3, [
-      '..YYY...',
-      '.YYYYY..',
-      '.Y...Y..',
-      '.YYYYY..',
-      '..YYY...',
-      '...Y....',
-      '...Y....',
+    // ── Estrela amarela pequena (HUD / vitória) ───────────────────────────
+    makeTexture(this, 'star_gold', 3, [
       '...YY...',
-      '...Y....',
+      '...YY...',
+      'YYYYYYYY',
+      '.YYYYYY.',
+      '..YYYY..',
+      '.YYYYYY.',
+      '.YY..YY.',
     ]);
-    makeTexture(this, 'door_placeholder', 4, [
-      '.DDDDDDDD.',
-      'DdddddddD.',
-      'Dd..AA.dD.',
-      'Dd.AAAA.D.',
-      'Dd.A..A.D.',
-      'Dd.AAAA.D.',
-      'Dd..AA.dD.',
-      'DdddddddD.',
-      'Dd......D.',
-      'Dd......D.',
-      'Dd..00..D.',
-      'Dd......D.',
-      'Dd......D.',
-      'DdddddddD.',
-      'DDDDDDDDDD',
-      'DDDDDDDDDD',
+
+    // ── Coração cheio e vazio (HUD de vida) 8×7 ──────────────────────────
+    makeTexture(this, 'heart_full', 3, [
+      '.RR..RR.',
+      'RRRRRRRR',
+      'RRRRRRRR',
+      'RRRRRRRR',
+      '.RRRRRR.',
+      '..RRRR..',
+      '...RR...',
     ]);
+    makeTexture(this, 'heart_empty', 3, [
+      '.LL..LL.',
+      'L..LL..L',
+      'L......L',
+      'L......L',
+      '.L....L.',
+      '..L..L..',
+      '...LL...',
+    ]);
+
+    // ── Fundo de estrelas ─────────────────────────────────────────────────
+    this._makeStarBg();
   }
 
   _makeStarBg() {
     const g = this.make.graphics({ x: 0, y: 0, add: false });
     g.fillStyle(0x0d1b2a, 1);
-    g.fillRect(0, 0, 64, 64);
-    // Estrelas aleatórias mas determinísticas
+    g.fillRect(0, 0, 128, 128);
     const stars = [
       [5,3],[12,7],[20,2],[30,9],[45,4],[58,1],[3,15],[18,20],
       [35,12],[50,18],[7,28],[22,32],[40,25],[55,30],[10,40],
       [28,45],[48,38],[60,42],[15,55],[38,58],[52,50],[2,52],
+      [70,8],[85,3],[100,12],[115,6],[75,25],[92,30],[110,22],
+      [80,45],[98,52],[120,40],[68,60],[105,58],[88,15],[122,55],
     ];
     stars.forEach(([x, y]) => {
       const bright = (x + y) % 3 === 0;
-      g.fillStyle(bright ? 0xffffff : 0xaabbcc, 1);
+      g.fillStyle(bright ? 0xffffff : 0x6688aa, 1);
       g.fillRect(x, y, bright ? 2 : 1, bright ? 2 : 1);
     });
-    g.generateTexture('star_bg', 64, 64);
+    g.generateTexture('star_bg', 128, 128);
     g.destroy();
   }
 }

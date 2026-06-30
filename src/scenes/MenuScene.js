@@ -1,124 +1,95 @@
 import { CHARACTERS } from '../config/characters.js';
+import { FONT } from '../config/theme.js';
 
-// Tela de seleção de personagem.
-// Navegue com as setas esquerda/direita e confirme com Espaço ou Enter.
+// Seleção de personagem. ← → navega, Espaço/Enter confirma, ESC volta.
 export class MenuScene extends Phaser.Scene {
-  constructor() {
-    super({ key: 'MenuScene' });
-  }
+  constructor() { super({ key: 'MenuScene' }); }
 
   create() {
-    const W = this.cameras.main.width;
-    const H = this.cameras.main.height;
+    const W = this.scale.width, H = this.scale.height;
 
-    // ── Fundo ────────────────────────────────────────────────────────────
-    this.add.rectangle(W / 2, H / 2, W, H, 0x1a1a2e);
+    this.add.tileSprite(0, 0, W, H, 'star_bg').setOrigin(0, 0).setTileScale(2);
+    const glow = this.add.graphics();
+    glow.fillStyle(0x0d1b2a, 0.5); glow.fillRect(0, 0, W, H);
 
-    this.add.text(W / 2, 60, 'ESCOLHA SEU PERSONAGEM', {
-      fontSize: '24px',
-      fill: '#f1c40f',
-      fontStyle: 'bold'
+    this.add.text(W / 2, 70, 'ESCOLHA SEU PERSONAGEM', {
+      fontFamily: FONT, fontSize: '22px', color: '#f1c40f'
+    }).setOrigin(0.5);
+    this.add.text(W / 2, 110, 'SETAS PARA NAVEGAR   -   ESPACO PARA CONFIRMAR', {
+      fontFamily: FONT, fontSize: '10px', color: '#9fb3c8'
     }).setOrigin(0.5);
 
-    this.add.text(W / 2, 95, 'Use ← → para navegar  |  Espaço ou Enter para confirmar', {
-      fontSize: '13px',
-      fill: '#bdc3c7'
-    }).setOrigin(0.5);
-
-    // ── Cards dos personagens ─────────────────────────────────────────────
-    this.charKeys = Object.keys(CHARACTERS);   // ['hugo','alex','berto','weverton']
+    this.charKeys = Object.keys(CHARACTERS);
     this.selectedIndex = 0;
 
-    const cardW = 180;
-    const cardH = 240;
-    const gap   = 20;
+    const cardW = 230, cardH = 300, gap = 24;
     const totalW = this.charKeys.length * cardW + (this.charKeys.length - 1) * gap;
     const startX = (W - totalW) / 2 + cardW / 2;
 
     this.cards = this.charKeys.map((key, i) => {
-      const char = CHARACTERS[key];
+      const c = CHARACTERS[key];
       const x = startX + i * (cardW + gap);
-      const y = H / 2 + 20;
+      const y = H / 2 + 30;
 
-      // Fundo do card
-      const bg = this.add.rectangle(x, y, cardW, cardH, 0x2c3e50)
-        .setStrokeStyle(2, 0x7f8c8d);
-
-      // Retângulo colorido (placeholder do sprite)
-      const avatar = this.add.rectangle(x, y - 60, 48, 64, char.color);
-
-      // Nome
-      const nome = this.add.text(x, y + 20, char.name, {
-        fontSize: '18px',
-        fill: '#ecf0f1',
-        fontStyle: 'bold'
+      const bg = this.add.rectangle(x, y, cardW, cardH, 0x16213e).setStrokeStyle(3, 0x7f8c8d);
+      const sprite = this.add.image(x, y - 70, `player_${key}`).setScale(1.6);
+      const nome = this.add.text(x, y + 30, c.name.toUpperCase(), {
+        fontFamily: FONT, fontSize: '18px', color: '#ffffff'
+      }).setOrigin(0.5);
+      const hab = this.add.text(x, y + 70, c.ability, {
+        fontFamily: FONT, fontSize: '9px', color: '#9fb3c8',
+        align: 'center', wordWrap: { width: cardW - 24 }
+      }).setOrigin(0.5, 0);
+      const tecla = this.add.text(x, y + 120, '[ F ]', {
+        fontFamily: FONT, fontSize: '11px', color: '#2ecc71'
       }).setOrigin(0.5);
 
-      // Habilidade — quebra em múltiplas linhas
-      const hab = this.add.text(x, y + 55, char.ability, {
-        fontSize: '11px',
-        fill: '#95a5a6',
-        wordWrap: { width: cardW - 16 },
-        align: 'center'
-      }).setOrigin(0.5, 0);
-
-      return { bg, avatar, nome, hab, x, y, cardW, cardH };
+      return { bg, sprite, nome, hab, tecla, x, y, cardH };
     });
 
-    // ── Seta indicadora ───────────────────────────────────────────────────
-    this.arrow = this.add.text(0, 0, '▼', {
-      fontSize: '20px', fill: '#f1c40f'
+    this.arrow = this.add.text(0, 0, 'v', {
+      fontFamily: FONT, fontSize: '18px', color: '#f1c40f'
     }).setOrigin(0.5);
 
     this._updateSelection();
 
-    // ── Teclado ───────────────────────────────────────────────────────────
     this.input.keyboard.on('keydown-LEFT',  () => this._move(-1));
     this.input.keyboard.on('keydown-RIGHT', () => this._move(1));
     this.input.keyboard.on('keydown-SPACE', () => this._confirm());
     this.input.keyboard.on('keydown-ENTER', () => this._confirm());
+    this.input.keyboard.on('keydown-ESC',   () => this.scene.start('TitleScene'));
+
+    // Botão voltar
+    const back = this.add.text(40, H - 40, '< VOLTAR', {
+      fontFamily: FONT, fontSize: '12px', color: '#bdc3c7'
+    }).setInteractive({ useHandCursor: true });
+    back.on('pointerdown', () => this.scene.start('TitleScene'));
   }
 
   _move(dir) {
-    this.selectedIndex = Phaser.Math.Wrap(
-      this.selectedIndex + dir, 0, this.charKeys.length
-    );
+    this.selectedIndex = Phaser.Math.Wrap(this.selectedIndex + dir, 0, this.charKeys.length);
     this._updateSelection();
   }
 
   _updateSelection() {
-    // Destaca o card selecionado e esmaece os outros
     this.cards.forEach((card, i) => {
-      const selected = i === this.selectedIndex;
-      card.bg.setFillStyle(selected ? 0x34495e : 0x2c3e50);
-      card.bg.setStrokeStyle(selected ? 3 : 2, selected ? 0xf1c40f : 0x7f8c8d);
-      card.avatar.setAlpha(selected ? 1 : 0.4);
-      card.nome.setAlpha(selected ? 1 : 0.5);
-      card.hab.setAlpha(selected ? 1 : 0.4);
+      const sel = i === this.selectedIndex;
+      card.bg.setFillStyle(sel ? 0x1f3a5f : 0x16213e);
+      card.bg.setStrokeStyle(sel ? 4 : 3, sel ? 0xf1c40f : 0x7f8c8d);
+      const a = sel ? 1 : 0.45;
+      card.sprite.setAlpha(a); card.nome.setAlpha(a);
+      card.hab.setAlpha(a); card.tecla.setAlpha(a);
+      card.sprite.setScale(sel ? 1.9 : 1.6);
     });
-
-    // Posiciona a seta acima do card selecionado
     const c = this.cards[this.selectedIndex];
-    this.arrow.setPosition(c.x, c.y - c.cardH / 2 - 20);
-
-    // Animação de pulso na seta
+    this.arrow.setPosition(c.x, c.y - c.cardH / 2 - 18);
     this.tweens.killTweensOf(this.arrow);
-    this.tweens.add({
-      targets: this.arrow,
-      y: this.arrow.y + 6,
-      duration: 400,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
+    this.tweens.add({ targets: this.arrow, y: this.arrow.y + 6, duration: 400, yoyo: true, repeat: -1 });
   }
 
   _confirm() {
-    const chosenKey = this.charKeys[this.selectedIndex];
-
-    // Flash no card antes de trocar de cena
-    this.cameras.main.flash(300, 255, 255, 255, false, () => {
-      this.scene.start('Level1Scene', { char: chosenKey });
-    });
+    const chosen = this.charKeys[this.selectedIndex];
+    this.cameras.main.flash(220, 255, 255, 255);
+    this.time.delayedCall(140, () => this.scene.start('Level1Scene', { char: chosen }));
   }
 }

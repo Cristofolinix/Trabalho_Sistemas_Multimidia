@@ -1,43 +1,62 @@
-// Inimigo base: patrulha entre dois pontos X e causa dano ao encostar.
-// Extensível para os inimigos específicos de cada fase.
+// Inimigo com tipo. Patrulha entre dois X e causa dano ao encostar.
+//  - 'ressaca': lento e cambaleante
+//  - 'trote':   rápido e errático
+const TYPES = {
+  ressaca: { texture: 'enemy_ressaca', speed: 55,  damage: 1, wobble: true  },
+  trote:   { texture: 'enemy_trote',   speed: 120, damage: 1, wobble: false },
+};
+
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
-  /**
-   * @param {Phaser.Scene} scene
-   * @param {number} x       posição inicial
-   * @param {number} y
-   * @param {number} leftX   limite esquerdo da patrulha
-   * @param {number} rightX  limite direito da patrulha
-   */
-  constructor(scene, x, y, leftX, rightX) {
-    super(scene, x, y, 'enemy_placeholder');
+  constructor(scene, x, y, leftX, rightX, type = 'ressaca') {
+    const def = TYPES[type] ?? TYPES.ressaca;
+    super(scene, x, y, def.texture);
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.body.setSize(30, 36);
-    this.setTint(0x9b59b6);  // roxo — fácil de distinguir do jogador
+    this.type = type;
+    this.def = def;
+    this.damage = def.damage;
 
-    // Limites de patrulha
+    this.body.setSize(28, 46);
+    this.body.setOffset(7, 6);
+    this.setCollideWorldBounds(false);
+
     this.leftX = leftX;
     this.rightX = rightX;
-    this.speed = 80;
+    this.speed = def.speed;
+    this._t = 0;
 
-    // Começa indo para a direita
     this.setVelocityX(this.speed);
-
-    // Impede que o inimigo caia por gravidade fora das plataformas
-    this.body.setAllowGravity(true);
-    this.setCollideWorldBounds(false);
   }
 
-  update() {
-    // Inverte direção ao atingir os limites
-    if (this.x <= this.leftX) {
+  update(time, delta) {
+    if (!this.active) return;
+
+    // Inverte ao atingir os limites de patrulha ou bater numa parede
+    if (this.x <= this.leftX || this.body.blocked.left) {
       this.setVelocityX(this.speed);
       this.setFlipX(false);
-    } else if (this.x >= this.rightX) {
+    } else if (this.x >= this.rightX || this.body.blocked.right) {
       this.setVelocityX(-this.speed);
       this.setFlipX(true);
     }
+
+    // Cambaleio visual da Ressaca
+    if (this.def.wobble) {
+      this._t += (delta ?? 16);
+      this.setAngle(Math.sin(this._t / 200) * 8);
+    }
+  }
+
+  // Morte com pequeno efeito de "puff"
+  kill() {
+    if (!this.active) return;
+    const puff = this.scene.add.circle(this.x, this.y, 6, 0xffffff, 0.7);
+    this.scene.tweens.add({
+      targets: puff, scaleX: 3, scaleY: 3, alpha: 0, duration: 250,
+      onComplete: () => puff.destroy()
+    });
+    this.destroy();
   }
 }

@@ -22,6 +22,7 @@ export const PAL = {
   // Genérico
   'P': 0x1a252f,   // calça escura
   'p': 0x2c3e50,   // calça clara
+  'K': 0x2c2c2c,   // sapatos (preto)
   'Y': 0xf1c40f,   // amarelo (chave/fogo)
   'y': 0xd4ac0d,   // amarelo escuro
   // Inimigo Ressaca — roxo esverdeado, olheiras
