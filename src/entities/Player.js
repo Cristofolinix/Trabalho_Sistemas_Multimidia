@@ -2,17 +2,21 @@
 // com a cor da camisa já embutida — sem tint, para preservar os detalhes.
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, config) {
-    super(scene, x, y, `player_${config.key}`);
+    super(scene, x, y, `${config.key}_idle`, 0);
 
     this.config = config;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    // Sprite tem 48×66 px (16×22 grid × px3). Hitbox menor e centrada.
+    // Spritesheet 32×32 (Pixel Adventure). Escala 1.8 e hitbox no corpo.
+    this.setScale(1.8);
     this.setCollideWorldBounds(false);
-    this.body.setSize(30, 58);
-    this.body.setOffset(9, 6);
+    this.body.setSize(16, 26);
+    this.body.setOffset(8, 6);
+
+    this.play(`${config.key}-idle`);
+    this._anim = 'idle';
 
     // Atributos
     this.hp = 4;
@@ -72,6 +76,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.setVelocityY(this.config.jumpVelocity);
       this.jumpBuffer = 0;
       this.coyote = 0;
+    }
+
+    // ── Animação por estado ───────────────────────────────────────────────
+    let state;
+    if (!onGround) state = this.body.velocity.y < 0 ? 'jump' : 'fall';
+    else if (Math.abs(this.body.velocity.x) > 15) state = 'run';
+    else state = 'idle';
+    if (state !== this._anim) {
+      this._anim = state;
+      this.play(`${this.config.key}-${state}`, true);
     }
 
     // ── Habilidade — F ────────────────────────────────────────────────────

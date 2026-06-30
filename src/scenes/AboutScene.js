@@ -52,14 +52,14 @@ export class AboutScene extends Phaser.Scene {
     y += 40;
 
     // Ressaca
-    this.add.image(rx + 20, y + 10, 'enemy_ressaca').setScale(1.3);
+    this.add.sprite(rx + 20, y + 14, 'ressaca_walk', 0).setScale(2).play('ressaca-walk');
     this.add.text(rx + 60, y - 4, 'RESSACA', { fontFamily: FONT, fontSize: '12px', color: '#bb88dd' });
     this.add.text(rx + 60, y + 18, 'Lento e cambaleante.', { fontFamily: FONT, fontSize: '9px', color: '#bdc3c7' });
     this.add.text(rx + 60, y + 36, 'Anda devagar pelo chao.', { fontFamily: FONT, fontSize: '9px', color: '#bdc3c7' });
     y += 90;
 
     // Trote
-    this.add.image(rx + 20, y + 10, 'enemy_trote').setScale(1.3);
+    this.add.sprite(rx + 20, y + 10, 'trote_run', 0).setScale(1.8).play('trote-run');
     this.add.text(rx + 60, y - 4, 'TROTE', { fontFamily: FONT, fontSize: '12px', color: '#e8a87c' });
     this.add.text(rx + 60, y + 18, 'Rapido e agitado.', { fontFamily: FONT, fontSize: '9px', color: '#bdc3c7' });
     this.add.text(rx + 60, y + 36, 'Persegue em alta velocidade.', { fontFamily: FONT, fontSize: '9px', color: '#bdc3c7' });

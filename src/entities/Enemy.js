@@ -1,15 +1,22 @@
 // Inimigo com tipo. Patrulha entre dois X e causa dano ao encostar.
-//  - 'ressaca': lento e cambaleante
-//  - 'trote':   rápido e errático
+// Sprites: Pixel Adventure (Pixel Frog, CC0).
+//  - 'ressaca': Snail — lento
+//  - 'trote':   Chicken — rápido
 const TYPES = {
-  ressaca: { texture: 'enemy_ressaca', speed: 55,  damage: 1, wobble: true  },
-  trote:   { texture: 'enemy_trote',   speed: 120, damage: 1, wobble: false },
+  ressaca: {
+    sheet: 'ressaca_walk', anim: 'ressaca-walk', speed: 50,  damage: 1,
+    scale: 1.9, body: [30, 14], offset: [4, 8],
+  },
+  trote: {
+    sheet: 'trote_run', anim: 'trote-run', speed: 120, damage: 1,
+    scale: 1.8, body: [16, 24], offset: [8, 8],
+  },
 };
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, leftX, rightX, type = 'ressaca') {
     const def = TYPES[type] ?? TYPES.ressaca;
-    super(scene, x, y, def.texture);
+    super(scene, x, y, def.sheet, 0);
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -18,38 +25,33 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.def = def;
     this.damage = def.damage;
 
-    this.body.setSize(28, 46);
-    this.body.setOffset(7, 6);
+    this.setScale(def.scale);
+    this.body.setSize(def.body[0], def.body[1]);
+    this.body.setOffset(def.offset[0], def.offset[1]);
     this.setCollideWorldBounds(false);
 
     this.leftX = leftX;
     this.rightX = rightX;
     this.speed = def.speed;
-    this._t = 0;
 
+    this.play(def.anim);
     this.setVelocityX(this.speed);
   }
 
-  update(time, delta) {
+  update() {
     if (!this.active) return;
 
-    // Inverte ao atingir os limites de patrulha ou bater numa parede
+    // Inverte ao atingir os limites de patrulha ou bater numa parede.
+    // O sprite "olha" para a esquerda por padrão; flipX vira para a direita.
     if (this.x <= this.leftX || this.body.blocked.left) {
       this.setVelocityX(this.speed);
-      this.setFlipX(false);
+      this.setFlipX(true);
     } else if (this.x >= this.rightX || this.body.blocked.right) {
       this.setVelocityX(-this.speed);
-      this.setFlipX(true);
-    }
-
-    // Cambaleio visual da Ressaca
-    if (this.def.wobble) {
-      this._t += (delta ?? 16);
-      this.setAngle(Math.sin(this._t / 200) * 8);
+      this.setFlipX(false);
     }
   }
 
-  // Morte com pequeno efeito de "puff"
   kill() {
     if (!this.active) return;
     const puff = this.scene.add.circle(this.x, this.y, 6, 0xffffff, 0.7);

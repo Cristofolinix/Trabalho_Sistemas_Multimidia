@@ -1,82 +1,30 @@
 import { makeTexture, PAL } from '../utils/pixelArt.js';
 import { CHARACTERS } from '../config/characters.js';
 
-// Jogador (16×22). 'C'/'c' = cor da camisa (varia por personagem).
-const PLAYER_ROWS = [
-  '................',
-  '.....HHHHHH.....',
-  '....HHHHHHHH....',
-  '....HSSSSSSH....',
-  '....SSSSSSSS....',
-  '....S0SSSS0S....',
-  '....SSSSSSSS....',
-  '....SssssssS....',
-  '.....SSSSSS.....',
-  '......SccS......',
-  '....CCCCCCCC....',
-  '...CCCCCCCCCC...',
-  '..SCCCCCCCCCCS..',
-  '..SCcCCCCCCcCS..',
-  '...CCCCCCCCCC...',
-  '...CCCCCCCCCC...',
-  '....CCCCCCCC....',
-  '....PPPPPPPP....',
-  '....PPP..PPP....',
-  '....PPP..PPP....',
-  '....KKK..KKK....',
-  '...KKKK..KKKK...',
-];
-
-// Ressaca: estudante de ressaca, encurvado, segurando uma caneca (AA). 14×18
-const RESSACA_ROWS = [
-  '..HHHHHHHHHH..',
-  '.HHHHHHHHHHHH.',
-  '.HHZZZZZZZZHH.',
-  '..ZmZZZZZZmZ..',
-  '..Z0ZZZZ00ZZ..',
-  '..ZZZZZZZZZZ..',
-  '..ZZsssssZZZ..',
-  '..MMMMMMMM....',
-  '.MMMMMMMMMMAA.',
-  '.MMMMMMMMMMAA.',
-  '.MmMMMMMMmMAA.',
-  '..MMMMMMMM....',
-  '..MMMMMMMM....',
-  '..MMM..MMM....',
-  '..MM....MM....',
-  '..mm....mm....',
-  '.KKK....KKK...',
-  '..............',
-];
-
-// Trote: calouro com boné e rosto pintado (faixa R). 14×18
-const TROTE_ROWS = [
-  '...TTTTTTTT...',
-  '..TTTTTTTTTT..',
-  '..TtTTTTTTtT..',
-  '...SSSSSSSS...',
-  '...S0SSSS0S...',
-  '...RRRRRRRR...',
-  '....SSSSSS....',
-  '...OOOOOOOO...',
-  '..OOOOOOOOOO..',
-  '..OoOOOOOOoO..',
-  '..OOOOOOOOOO..',
-  '...OOOOOOOO...',
-  '...OOOOOOOO...',
-  '...OOO..OOO...',
-  '...OO....OO...',
-  '...pp....pp...',
-  '..KKK..KKK....',
-  '..............',
-];
+const STATES = ['idle', 'run', 'jump', 'fall'];
 
 export class BootScene extends Phaser.Scene {
   constructor() { super({ key: 'BootScene' }); }
 
-  preload() { this._makeAllTextures(); }
+  preload() {
+    // ── Spritesheets externos (Pixel Adventure — Pixel Frog, CC0) ──────────
+    Object.keys(CHARACTERS).forEach(c => {
+      STATES.forEach(st =>
+        this.load.spritesheet(`${c}_${st}`, `assets/player_${c}_${st}.png`,
+          { frameWidth: 32, frameHeight: 32 }));
+    });
+    this.load.spritesheet('ressaca_walk', 'assets/enemy_ressaca_walk.png',
+      { frameWidth: 38, frameHeight: 24 });
+    this.load.spritesheet('trote_run', 'assets/enemy_trote_run.png',
+      { frameWidth: 32, frameHeight: 34 });
+
+    // ── Texturas desenhadas por código (itens, cenário, HUD) ──────────────
+    this._makeArtTextures();
+  }
 
   create() {
+    this._makeAnimations();
+
     const go = () => this.scene.start('TitleScene');
     if (document.fonts && document.fonts.load) {
       Promise.race([
@@ -86,18 +34,27 @@ export class BootScene extends Phaser.Scene {
     } else { go(); }
   }
 
-  _makeAllTextures() {
-    const PX = 3;
-
-    // ── Jogadores (uma textura por personagem) ──
-    Object.values(CHARACTERS).forEach(c => {
-      const pal = { ...PAL, C: c.color, c: c.colorDark };
-      makeTexture(this, `player_${c.key}`, PX, PLAYER_ROWS, pal);
+  // Animações globais (válidas em todas as cenas)
+  _makeAnimations() {
+    const mk = (key, sheet, rate, loop) => {
+      if (this.anims.exists(key)) return;
+      this.anims.create({
+        key, frames: this.anims.generateFrameNumbers(sheet),
+        frameRate: rate, repeat: loop ? -1 : 0
+      });
+    };
+    Object.keys(CHARACTERS).forEach(c => {
+      mk(`${c}-idle`, `${c}_idle`, 12, true);
+      mk(`${c}-run`,  `${c}_run`,  18, true);
+      mk(`${c}-jump`, `${c}_jump`,  1, false);
+      mk(`${c}-fall`, `${c}_fall`,  1, false);
     });
+    mk('ressaca-walk', 'ressaca_walk', 8,  true);
+    mk('trote-run',    'trote_run',    18, true);
+  }
 
-    // ── Inimigos ──
-    makeTexture(this, 'enemy_ressaca', PX, RESSACA_ROWS);
-    makeTexture(this, 'enemy_trote',   PX, TROTE_ROWS);
+  _makeArtTextures() {
+    const PX = 3;
 
     // ── Chave ──
     makeTexture(this, 'key_sprite', PX, [
@@ -181,14 +138,10 @@ export class BootScene extends Phaser.Scene {
 
     // ── Projétil ──
     makeTexture(this, 'projectile', 3, [
-      '.BBB.',
-      'BBBBB',
-      'BBwBB',
-      'BBBBB',
-      '.BBB.',
+      '.BBB.', 'BBBBB', 'BBwBB', 'BBBBB', '.BBB.',
     ], { ...PAL, w: 0xaed6f1 });
 
-    // ── Estrela verde SIMÉTRICA (logo UNEMAT) — grade 15 col, centro col 7 ──
+    // ── Estrela verde simétrica (logo UNEMAT) ──
     const starPal = { X: 0x2e8b3d, x: 0x256d30 };
     makeTexture(this, 'star_green', 5, [
       '.......X.......',
@@ -208,36 +161,20 @@ export class BootScene extends Phaser.Scene {
       'X...........X..',
     ], starPal);
 
-    // ── Estrela dourada (HUD / vitória) ──
+    // ── Estrela dourada ──
     makeTexture(this, 'star_gold', 3, [
-      '...Y...',
-      '..YYY..',
-      'YYYYYYY',
-      '.YYYYY.',
-      '.YY.YY.',
+      '...Y...', '..YYY..', 'YYYYYYY', '.YYYYY.', '.YY.YY.',
     ]);
 
     // ── Corações ──
     makeTexture(this, 'heart_full', 3, [
-      '.RR..RR.',
-      'RRRRRRRR',
-      'RRRRRRRR',
-      'RRRRRRRR',
-      '.RRRRRR.',
-      '..RRRR..',
-      '...RR...',
+      '.RR..RR.', 'RRRRRRRR', 'RRRRRRRR', 'RRRRRRRR', '.RRRRRR.', '..RRRR..', '...RR...',
     ]);
     makeTexture(this, 'heart_empty', 3, [
-      '.LL..LL.',
-      'L..LL..L',
-      'L......L',
-      'L......L',
-      '.L....L.',
-      '..L..L..',
-      '...LL...',
+      '.LL..LL.', 'L..LL..L', 'L......L', 'L......L', '.L....L.', '..L..L..', '...LL...',
     ]);
 
-    // ── Confete (partícula festiva) ──
+    // ── Confete ──
     const cf = this.make.graphics({ x: 0, y: 0, add: false });
     cf.fillStyle(0xffffff, 1); cf.fillRect(0, 0, 6, 6);
     cf.generateTexture('confetti', 6, 6); cf.destroy();
@@ -250,7 +187,6 @@ export class BootScene extends Phaser.Scene {
 
   _makeStarBg() {
     const g = this.make.graphics({ x: 0, y: 0, add: false });
-    // Céu quente de início de noite (calourada)
     g.fillStyle(0x2a1840, 1); g.fillRect(0, 0, 128, 128);
     const stars = [
       [5,3],[12,7],[20,2],[30,9],[45,4],[58,1],[3,15],[18,20],
@@ -268,11 +204,9 @@ export class BootScene extends Phaser.Scene {
     g.destroy();
   }
 
-  // Silhueta de prédios do campus (tileável na horizontal)
   _makeCityscape() {
     const W = 320, H = 180;
     const g = this.make.graphics({ x: 0, y: 0, add: false });
-    // prédios escuros
     const blds = [
       [0, 90, 46], [50, 60, 40], [95, 110, 38], [140, 50, 44],
       [190, 80, 50], [245, 40, 38], [288, 100, 32],
@@ -280,7 +214,6 @@ export class BootScene extends Phaser.Scene {
     blds.forEach(([x, top, w]) => {
       g.fillStyle(0x3a2150, 1);
       g.fillRect(x, top, w, H - top);
-      // janelas acesas (luz quente)
       for (let wy = top + 8; wy < H - 8; wy += 16) {
         for (let wx = x + 6; wx < x + w - 6; wx += 14) {
           if ((wx + wy) % 3 !== 0) {
@@ -294,20 +227,16 @@ export class BootScene extends Phaser.Scene {
     g.destroy();
   }
 
-  // Varal de luzinhas de festa (tileável na horizontal)
   _makeLights() {
     const W = 200, H = 48;
     const g = this.make.graphics({ x: 0, y: 0, add: false });
-    // fio em arco
     g.lineStyle(2, 0x4a3a2a, 1);
-    g.beginPath();
-    g.moveTo(0, 6);
+    g.beginPath(); g.moveTo(0, 6);
     for (let x = 0; x <= W; x += 4) {
       const y = 6 + Math.sin((x / W) * Math.PI) * 16;
       g.lineTo(x, y);
     }
     g.strokePath();
-    // lâmpadas coloridas penduradas
     const colors = [0xff5a5a, 0xffd24a, 0x5ad1ff, 0x6aff8a, 0xff8ad1];
     for (let i = 0, x = 16; x < W; x += 28, i++) {
       const y = 6 + Math.sin((x / W) * Math.PI) * 16;

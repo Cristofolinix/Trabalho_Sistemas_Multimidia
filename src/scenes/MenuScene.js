@@ -32,7 +32,7 @@ export class MenuScene extends Phaser.Scene {
       const y = H / 2 + 30;
 
       const bg = this.add.rectangle(x, y, cardW, cardH, 0x16213e).setStrokeStyle(3, 0x7f8c8d);
-      const sprite = this.add.image(x, y - 70, `player_${key}`).setScale(1.6);
+      const sprite = this.add.sprite(x, y - 70, `${key}_idle`, 0).setScale(2.6).play(`${key}-idle`);
       const nome = this.add.text(x, y + 30, c.name.toUpperCase(), {
         fontFamily: FONT, fontSize: '18px', color: '#ffffff'
       }).setOrigin(0.5);
@@ -79,7 +79,7 @@ export class MenuScene extends Phaser.Scene {
       const a = sel ? 1 : 0.45;
       card.sprite.setAlpha(a); card.nome.setAlpha(a);
       card.hab.setAlpha(a); card.tecla.setAlpha(a);
-      card.sprite.setScale(sel ? 1.9 : 1.6);
+      card.sprite.setScale(sel ? 3.1 : 2.6);
     });
     const c = this.cards[this.selectedIndex];
     this.arrow.setPosition(c.x, c.y - c.cardH / 2 - 18);

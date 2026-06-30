@@ -22,7 +22,7 @@ export class CreditsScene extends Phaser.Scene {
     keys.forEach((k, i) => {
       const c = CHARACTERS[k];
       const x = startX + i * 150;
-      this.add.image(x, 210, `player_${k}`).setScale(1.8);
+      this.add.sprite(x, 205, `${k}_idle`, 0).setScale(2.6).play(`${k}-idle`);
       this.add.text(x, 275, c.name.toUpperCase(), {
         fontFamily: FONT, fontSize: '12px',
         color: '#' + c.color.toString(16).padStart(6, '0')
@@ -36,6 +36,10 @@ export class CreditsScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.add.text(W / 2, 450, 'DISCIPLINA: SISTEMAS MULTIMIDIA', {
       fontFamily: FONT, fontSize: '11px', color: '#5d6d7e'
+    }).setOrigin(0.5);
+
+    this.add.text(W / 2, 490, 'ARTE: PIXEL ADVENTURE - PIXEL FROG (CC0)', {
+      fontFamily: FONT, fontSize: '9px', color: '#5d6d7e'
     }).setOrigin(0.5);
 
     const back = this.add.rectangle(W / 2, H - 44, 220, 44, 0x7f8c8d, 0.9)
