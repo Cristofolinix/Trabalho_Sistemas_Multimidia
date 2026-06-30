@@ -1,69 +1,71 @@
 import { makeTexture, PAL } from '../utils/pixelArt.js';
 import { CHARACTERS } from '../config/characters.js';
 
-// Template do corpo do jogador (14×20). 'C'/'c' = cor da camisa (varia por personagem).
+// Jogador (16×22). 'C'/'c' = cor da camisa (varia por personagem).
 const PLAYER_ROWS = [
-  '.....HHHH.....',
-  '....HHHHHH....',
-  '...HHSSSSHH...',
-  '...HSSSSSSH...',
-  '...S0SSSS0S...',
-  '...SSSSSSSS...',
-  '...sSSSSSSs...',
-  '....SSSSSS....',
-  '...CCCCCCCC...',
-  '..CCCCCCCCCC..',
-  '..CcCCCCCCcC..',
-  '..CCCCCCCCCC..',
-  '...CCCCCCCC...',
-  '...CcCCCCcC...',
-  '...CCCCCCCC...',
-  '...PPPPPPPP...',
-  '...PPP..PPP...',
-  '...PP....PP...',
-  '...pp....pp...',
-  '..KKK..KKK....',
+  '................',
+  '.....HHHHHH.....',
+  '....HHHHHHHH....',
+  '....HSSSSSSH....',
+  '....SSSSSSSS....',
+  '....S0SSSS0S....',
+  '....SSSSSSSS....',
+  '....SssssssS....',
+  '.....SSSSSS.....',
+  '......SccS......',
+  '....CCCCCCCC....',
+  '...CCCCCCCCCC...',
+  '..SCCCCCCCCCCS..',
+  '..SCcCCCCCCcCS..',
+  '...CCCCCCCCCC...',
+  '...CCCCCCCCCC...',
+  '....CCCCCCCC....',
+  '....PPPPPPPP....',
+  '....PPP..PPP....',
+  '....PPP..PPP....',
+  '....KKK..KKK....',
+  '...KKKK..KKKK...',
 ];
 
-// Inimigo Ressaca (zumbi cansado, encurvado) 14×18
+// Ressaca: estudante de ressaca, encurvado, segurando uma caneca (AA). 14×18
 const RESSACA_ROWS = [
-  '.....ZZZZ.....',
-  '....ZZZZZZ....',
-  '...Z0ZZZZ0Z...',   // olheiras escuras
-  '...ZZZZZZZZ...',
-  '...zZZZZZZz...',
-  '....ZZZZZZ....',
-  '...MMMMMMMM...',
-  '..MMMMMMMMMM..',
-  '..MmMMMMMMmM..',
-  '..MMMMMMMMMM..',
-  '...MMMMMMMM...',
-  '...MMMMMMMM...',
-  '...MMM..MMM...',
-  '...MM....MM...',
-  '...mm....mm...',
-  '..000..000....',
-  '..............',
+  '..HHHHHHHHHH..',
+  '.HHHHHHHHHHHH.',
+  '.HHZZZZZZZZHH.',
+  '..ZmZZZZZZmZ..',
+  '..Z0ZZZZ00ZZ..',
+  '..ZZZZZZZZZZ..',
+  '..ZZsssssZZZ..',
+  '..MMMMMMMM....',
+  '.MMMMMMMMMMAA.',
+  '.MMMMMMMMMMAA.',
+  '.MmMMMMMMmMAA.',
+  '..MMMMMMMM....',
+  '..MMMMMMMM....',
+  '..MMM..MMM....',
+  '..MM....MM....',
+  '..mm....mm....',
+  '.KKK....KKK...',
   '..............',
 ];
 
-// Inimigo Trote (calouro com boné) 14×18
+// Trote: calouro com boné e rosto pintado (faixa R). 14×18
 const TROTE_ROWS = [
-  '...TTTTTTTT...',   // boné
+  '...TTTTTTTT...',
+  '..TTTTTTTTTT..',
   '..TtTTTTTTtT..',
   '...SSSSSSSS...',
   '...S0SSSS0S...',
-  '...SSSSSSSS...',
+  '...RRRRRRRR...',
   '....SSSSSS....',
-  '...TTTTTTTT...',   // camisa laranja
-  '..TTTTTTTTTT..',
-  '..TtTTTTTTtT..',
-  '..TTTTTTTTTT..',
-  '...TTTTTTTT...',
-  '...TTTTTTTT...',
-  '...PPP..PPP...',
-  '...PP....PP...',
-  '...PP....PP...',
+  '...OOOOOOOO...',
+  '..OOOOOOOOOO..',
+  '..OoOOOOOOoO..',
+  '..OOOOOOOOOO..',
+  '...OOOOOOOO...',
+  '...OOOOOOOO...',
+  '...OOO..OOO...',
+  '...OO....OO...',
   '...pp....pp...',
   '..KKK..KKK....',
   '..............',
@@ -72,37 +74,32 @@ const TROTE_ROWS = [
 export class BootScene extends Phaser.Scene {
   constructor() { super({ key: 'BootScene' }); }
 
-  preload() {
-    this._makeAllTextures();
-  }
+  preload() { this._makeAllTextures(); }
 
   create() {
-    // Garante que a fonte pixelada esteja carregada antes de desenhar textos
     const go = () => this.scene.start('TitleScene');
     if (document.fonts && document.fonts.load) {
       Promise.race([
         document.fonts.load('16px "Press Start 2P"').then(() => document.fonts.ready),
-        new Promise(res => this.time.delayedCall(2500, res))   // timeout de segurança
+        new Promise(res => this.time.delayedCall(2500, res))
       ]).then(go).catch(go);
-    } else {
-      go();
-    }
+    } else { go(); }
   }
 
   _makeAllTextures() {
-    const PX = 3;   // tamanho de cada pixel — sprites nítidos e maiores
+    const PX = 3;
 
-    // ── Jogadores: uma textura por personagem (camisa colorida embutida) ──
+    // ── Jogadores (uma textura por personagem) ──
     Object.values(CHARACTERS).forEach(c => {
       const pal = { ...PAL, C: c.color, c: c.colorDark };
       makeTexture(this, `player_${c.key}`, PX, PLAYER_ROWS, pal);
     });
 
-    // ── Inimigos ──────────────────────────────────────────────────────────
+    // ── Inimigos ──
     makeTexture(this, 'enemy_ressaca', PX, RESSACA_ROWS);
     makeTexture(this, 'enemy_trote',   PX, TROTE_ROWS);
 
-    // ── Chave ───────────────────────────────────────────────────────────── 8×11
+    // ── Chave ──
     makeTexture(this, 'key_sprite', PX, [
       '..YYYY..',
       '.YyyyyY.',
@@ -117,7 +114,7 @@ export class BootScene extends Phaser.Scene {
       '...YYY..',
     ]);
 
-    // ── Porta ───────────────────────────────────────────────────────────── 12×18
+    // ── Porta ──
     makeTexture(this, 'door_sprite', PX, [
       '.NNNNNNNNNN.',
       'NNNNNNNNNNNN',
@@ -139,7 +136,7 @@ export class BootScene extends Phaser.Scene {
       '.NNNNNNNNNN.',
     ]);
 
-    // ── Tiles de chão e plataforma (32×32 via grid 16×16, px=2) ───────────
+    // ── Tiles ──
     makeTexture(this, 'floor_tile', 2, [
       'kkkkkkkkkkkkkkkk',
       'llllllllllllllll',
@@ -170,7 +167,7 @@ export class BootScene extends Phaser.Scene {
       'llllllllllllllll',
     ]);
 
-    // ── Spikes (armadilha) 8×8 ────────────────────────────────────────────
+    // ── Spikes ──
     makeTexture(this, 'spike_tile', 4, [
       '...kk...',
       '...kk...',
@@ -182,7 +179,7 @@ export class BootScene extends Phaser.Scene {
       'LLLLLLLL',
     ]);
 
-    // ── Projétil (Alex) ───────────────────────────────────────────────────
+    // ── Projétil ──
     makeTexture(this, 'projectile', 3, [
       '.BBB.',
       'BBBBB',
@@ -191,38 +188,36 @@ export class BootScene extends Phaser.Scene {
       '.BBB.',
     ], { ...PAL, w: 0xaed6f1 });
 
-    // ── Estrela verde (logo UNEMAT) ───────────────────────────────────────
+    // ── Estrela verde SIMÉTRICA (logo UNEMAT) — grade 15 col, centro col 7 ──
     const starPal = { X: 0x2e8b3d, x: 0x256d30 };
     makeTexture(this, 'star_green', 5, [
-      '.......XX.......',
-      '......XXXX......',
-      '......XXXX......',
-      '......XXXX......',
-      'XXXXXXXXXXXXXXXX',
-      '.XXXXXXXXXXXXXX.',
-      '..XXXXXXXXXXXX..',
-      '...XXXXXXXXXX...',
-      '...XXXXXXXXXX...',
-      '..XXXXXXXXXXXX..',
-      '..XXXXX.xXXXXX..',
-      '.XXXX....xXXXX..',
-      '.XXx......xXXX..',
-      '.Xx........xXX..',
-      '.x..........x..',
+      '.......X.......',
+      '.......X.......',
+      '......XXX......',
+      '......XXX......',
+      'XXXXXXXXXXXXXXX',
+      '.XXXXXXXXXXXXX.',
+      '..XXXXXXXXXXX..',
+      '...XXXXXXXXX...',
+      '...XXXXXXXXX...',
+      '..XXXXXXXXXXX..',
+      '..XXXXX.XXXXX..',
+      '.XXXX.....XXXX.',
+      '.XXX.......XXX.',
+      'XX.........XX..',
+      'X...........X..',
     ], starPal);
 
-    // ── Estrela amarela pequena (HUD / vitória) ───────────────────────────
+    // ── Estrela dourada (HUD / vitória) ──
     makeTexture(this, 'star_gold', 3, [
-      '...YY...',
-      '...YY...',
-      'YYYYYYYY',
-      '.YYYYYY.',
-      '..YYYY..',
-      '.YYYYYY.',
-      '.YY..YY.',
+      '...Y...',
+      '..YYY..',
+      'YYYYYYY',
+      '.YYYYY.',
+      '.YY.YY.',
     ]);
 
-    // ── Coração cheio e vazio (HUD de vida) 8×7 ──────────────────────────
+    // ── Corações ──
     makeTexture(this, 'heart_full', 3, [
       '.RR..RR.',
       'RRRRRRRR',
@@ -242,14 +237,21 @@ export class BootScene extends Phaser.Scene {
       '...LL...',
     ]);
 
-    // ── Fundo de estrelas ─────────────────────────────────────────────────
+    // ── Confete (partícula festiva) ──
+    const cf = this.make.graphics({ x: 0, y: 0, add: false });
+    cf.fillStyle(0xffffff, 1); cf.fillRect(0, 0, 6, 6);
+    cf.generateTexture('confetti', 6, 6); cf.destroy();
+
+    // ── Fundos procedurais ──
     this._makeStarBg();
+    this._makeCityscape();
+    this._makeLights();
   }
 
   _makeStarBg() {
     const g = this.make.graphics({ x: 0, y: 0, add: false });
-    g.fillStyle(0x0d1b2a, 1);
-    g.fillRect(0, 0, 128, 128);
+    // Céu quente de início de noite (calourada)
+    g.fillStyle(0x2a1840, 1); g.fillRect(0, 0, 128, 128);
     const stars = [
       [5,3],[12,7],[20,2],[30,9],[45,4],[58,1],[3,15],[18,20],
       [35,12],[50,18],[7,28],[22,32],[40,25],[55,30],[10,40],
@@ -259,10 +261,62 @@ export class BootScene extends Phaser.Scene {
     ];
     stars.forEach(([x, y]) => {
       const bright = (x + y) % 3 === 0;
-      g.fillStyle(bright ? 0xffffff : 0x6688aa, 1);
+      g.fillStyle(bright ? 0xffe8b0 : 0xc9a0e0, 1);
       g.fillRect(x, y, bright ? 2 : 1, bright ? 2 : 1);
     });
     g.generateTexture('star_bg', 128, 128);
+    g.destroy();
+  }
+
+  // Silhueta de prédios do campus (tileável na horizontal)
+  _makeCityscape() {
+    const W = 320, H = 180;
+    const g = this.make.graphics({ x: 0, y: 0, add: false });
+    // prédios escuros
+    const blds = [
+      [0, 90, 46], [50, 60, 40], [95, 110, 38], [140, 50, 44],
+      [190, 80, 50], [245, 40, 38], [288, 100, 32],
+    ];
+    blds.forEach(([x, top, w]) => {
+      g.fillStyle(0x3a2150, 1);
+      g.fillRect(x, top, w, H - top);
+      // janelas acesas (luz quente)
+      for (let wy = top + 8; wy < H - 8; wy += 16) {
+        for (let wx = x + 6; wx < x + w - 6; wx += 14) {
+          if ((wx + wy) % 3 !== 0) {
+            g.fillStyle(0xffd27a, 1);
+            g.fillRect(wx, wy, 5, 7);
+          }
+        }
+      }
+    });
+    g.generateTexture('bg_city', W, H);
+    g.destroy();
+  }
+
+  // Varal de luzinhas de festa (tileável na horizontal)
+  _makeLights() {
+    const W = 200, H = 48;
+    const g = this.make.graphics({ x: 0, y: 0, add: false });
+    // fio em arco
+    g.lineStyle(2, 0x4a3a2a, 1);
+    g.beginPath();
+    g.moveTo(0, 6);
+    for (let x = 0; x <= W; x += 4) {
+      const y = 6 + Math.sin((x / W) * Math.PI) * 16;
+      g.lineTo(x, y);
+    }
+    g.strokePath();
+    // lâmpadas coloridas penduradas
+    const colors = [0xff5a5a, 0xffd24a, 0x5ad1ff, 0x6aff8a, 0xff8ad1];
+    for (let i = 0, x = 16; x < W; x += 28, i++) {
+      const y = 6 + Math.sin((x / W) * Math.PI) * 16;
+      g.fillStyle(colors[i % colors.length], 1);
+      g.fillCircle(x, y + 10, 4);
+      g.fillStyle(0xffffff, 0.5);
+      g.fillCircle(x - 1, y + 9, 1.5);
+    }
+    g.generateTexture('bg_lights', W, H);
     g.destroy();
   }
 }

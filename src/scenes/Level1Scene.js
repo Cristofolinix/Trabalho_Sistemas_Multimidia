@@ -23,12 +23,8 @@ export class Level1Scene extends Phaser.Scene {
   }
 
   create() {
-    // ── Fundo em paralaxe (clima de calourada) ───────────────────────────
-    this.bg = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, 'star_bg')
-      .setOrigin(0, 0).setScrollFactor(0).setTileScale(2).setDepth(-20);
-    const glow = this.add.graphics().setScrollFactor(0).setDepth(-19);
-    glow.fillGradientStyle(0x2a0a3a, 0x2a0a3a, 0x0d1b2a, 0x0d1b2a, 0.7);
-    glow.fillRect(0, 0, this.scale.width, this.scale.height);
+    // ── Fundo da fase (clima de calourada) ───────────────────────────────
+    this._buildBackground();
 
     // ── Física e limites ─────────────────────────────────────────────────
     this.physics.world.setBounds(0, 0, WORLD_W, WORLD_H);
@@ -96,7 +92,11 @@ export class Level1Scene extends Phaser.Scene {
 
   update(time, delta) {
     if (this.isPaused) return;
-    this.bg.tilePositionX = this.cameras.main.scrollX * 0.15;
+    // Paralaxe (cada camada move numa velocidade diferente)
+    const sx = this.cameras.main.scrollX;
+    this.bg.tilePositionX    = sx * 0.10;
+    this.cityBg.tilePositionX = sx * 0.30;
+    this.lightsBg.tilePositionX = sx * 0.55;
     this.player.update(delta);
 
     // Atualiza checkpoint sempre que estiver pisando em piso sólido.
@@ -108,6 +108,91 @@ export class Level1Scene extends Phaser.Scene {
 
     // Queda no vazio
     if (this.player.isAlive && this.player.y > WORLD_H + 40) this._hurtAndRespawn();
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  //  FUNDO / CENÁRIO (tema Calourada)
+  // ════════════════════════════════════════════════════════════════════════
+  _buildBackground() {
+    const W = this.scale.width, H = this.scale.height;
+
+    // Céu quente em gradiente (início de noite)
+    const sky = this.add.graphics().setScrollFactor(0).setDepth(-40);
+    sky.fillGradientStyle(0x3a1a5a, 0x3a1a5a, 0x1a1030, 0x1a1030, 1);
+    sky.fillRect(0, 0, W, H);
+
+    // Estrelas (paralaxe muito lenta)
+    this.bg = this.add.tileSprite(0, 0, W, H, 'star_bg')
+      .setOrigin(0, 0).setScrollFactor(0).setTileScale(2).setDepth(-38);
+
+    // Silhueta do campus (prédios com janelas acesas)
+    this.cityBg = this.add.tileSprite(0, H - 320, W, 180, 'bg_city')
+      .setOrigin(0, 0).setScrollFactor(0).setTileScale(1.4).setDepth(-30);
+
+    // Varal de luzinhas de festa no topo
+    this.lightsBg = this.add.tileSprite(0, 40, W, 48, 'bg_lights')
+      .setOrigin(0, 0).setScrollFactor(0).setDepth(-26);
+
+    // Confete caindo (festivo, fixo na tela)
+    this.add.particles(0, -10, 'confetti', {
+      x: { min: 0, max: W }, y: -10,
+      lifespan: 7000,
+      speedY: { min: 25, max: 60 }, speedX: { min: -15, max: 15 },
+      scale: { min: 0.4, max: 0.9 }, rotate: { min: 0, max: 360 },
+      tint: [0xff5a5a, 0xffd24a, 0x5ad1ff, 0x6aff8a, 0xff8ad1],
+      frequency: 350, quantity: 1
+    }).setScrollFactor(0).setDepth(-24);
+
+    // ── Props no mundo (rolam junto com a fase) ──────────────────────────
+    // Faixas de boas-vindas
+    [[760, 'BEM-VINDOS, CALOUROS!'], [3500, 'CALOURADA 2026'],
+     [5600, 'FESTA NO CAMPUS!']].forEach(([x, txt]) => this._banner(x, 150, txt));
+
+    // Postes de luz ao longo do chão
+    [260, 1000, 2150, 2950, 4150, 5400, 6050].forEach(x => this._lamppost(x));
+
+    // Balões presos em plataformas
+    [[470, 480], [908, 280], [2000, 400], [3308, 245],
+     [4768, 315], [5900, 560]].forEach(([x, y]) => this._balloon(x, y));
+  }
+
+  _banner(x, y, text) {
+    const bg = this.add.rectangle(x, y, text.length * 13 + 24, 30, 0x8e2b2b)
+      .setStrokeStyle(2, 0xf1c40f).setDepth(-12);
+    this.add.text(x, y, text, {
+      fontFamily: FONT, fontSize: '11px', color: '#ffe8b0'
+    }).setOrigin(0.5).setDepth(-11);
+    // cordas
+    const g = this.add.graphics().setDepth(-13);
+    g.lineStyle(1, 0xf1c40f, 0.6);
+    g.lineBetween(x - bg.width / 2, y - 15, x - bg.width / 2 - 30, y - 60);
+    g.lineBetween(x + bg.width / 2, y - 15, x + bg.width / 2 + 30, y - 60);
+  }
+
+  _lamppost(x) {
+    const g = this.add.graphics().setDepth(-8);
+    g.fillStyle(0x2c2c3a, 1);
+    g.fillRect(x - 3, GROUND - 130, 6, 130);      // poste
+    g.fillRect(x - 14, GROUND - 134, 28, 8);       // braço
+    g.fillStyle(0xffd27a, 1);
+    g.fillCircle(x, GROUND - 126, 7);              // lâmpada
+    g.fillStyle(0xffd27a, 0.12);
+    g.fillCircle(x, GROUND - 126, 26);             // brilho
+  }
+
+  _balloon(x, y) {
+    const colors = [0xff5a5a, 0x5ad1ff, 0x6aff8a, 0xffd24a, 0xff8ad1];
+    const c = colors[(x + y) % colors.length];
+    const balloon = this.add.container(x, y).setDepth(-6);
+    const body = this.add.ellipse(0, 0, 18, 24, c);
+    const shine = this.add.ellipse(-4, -6, 5, 7, 0xffffff, 0.5);
+    const g = this.add.graphics();
+    g.lineStyle(1, 0xcccccc, 0.7); g.lineBetween(0, 12, 0, 34);
+    balloon.add([g, body, shine]);
+    this.tweens.add({
+      targets: balloon, y: y - 12, duration: 1800 + (x % 600),
+      yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+    });
   }
 
   // ════════════════════════════════════════════════════════════════════════

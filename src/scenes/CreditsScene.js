@@ -13,38 +13,29 @@ export class CreditsScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Personagens com sprite real
-    this.add.text(W / 2, 100, 'PERSONAGENS', {
-      fontFamily: FONT, fontSize: '14px', color: '#3498db'
+    this.add.text(W / 2, 120, 'PERSONAGENS', {
+      fontFamily: FONT, fontSize: '16px', color: '#3498db'
     }).setOrigin(0.5);
 
     const keys = Object.keys(CHARACTERS);
-    const startX = W / 2 - (keys.length - 1) * 110 / 2;
+    const startX = W / 2 - (keys.length - 1) * 150 / 2;
     keys.forEach((k, i) => {
       const c = CHARACTERS[k];
-      const x = startX + i * 110;
-      this.add.image(x, 165, `player_${k}`).setScale(1.4);
-      this.add.text(x, 215, c.name.toUpperCase(), {
-        fontFamily: FONT, fontSize: '11px',
+      const x = startX + i * 150;
+      this.add.image(x, 210, `player_${k}`).setScale(1.8);
+      this.add.text(x, 275, c.name.toUpperCase(), {
+        fontFamily: FONT, fontSize: '12px',
         color: '#' + c.color.toString(16).padStart(6, '0')
       }).setOrigin(0.5);
     });
 
-    // Inimigos
-    this.add.text(W / 2, 270, 'INIMIGOS', {
-      fontFamily: FONT, fontSize: '14px', color: '#9b59b6'
-    }).setOrigin(0.5);
-    this.add.image(W / 2 - 90, 320, 'enemy_ressaca').setScale(1.2);
-    this.add.text(W / 2 - 90, 360, 'RESSACA', { fontFamily: FONT, fontSize: '9px', color: '#bb88dd' }).setOrigin(0.5);
-    this.add.image(W / 2 + 90, 320, 'enemy_trote').setScale(1.2);
-    this.add.text(W / 2 + 90, 360, 'TROTE', { fontFamily: FONT, fontSize: '9px', color: '#e8a87c' }).setOrigin(0.5);
-
     // Tecnologia
-    this.add.text(W / 2, 415, 'FEITO COM', { fontFamily: FONT, fontSize: '12px', color: '#2ecc71' }).setOrigin(0.5);
-    this.add.text(W / 2, 445, 'PHASER 3.90  -  VITE  -  JAVASCRIPT', {
-      fontFamily: FONT, fontSize: '11px', color: '#9fb3c8'
+    this.add.text(W / 2, 370, 'FEITO COM', { fontFamily: FONT, fontSize: '14px', color: '#2ecc71' }).setOrigin(0.5);
+    this.add.text(W / 2, 405, 'PHASER 3.90  -  VITE  -  JAVASCRIPT', {
+      fontFamily: FONT, fontSize: '12px', color: '#9fb3c8'
     }).setOrigin(0.5);
-    this.add.text(W / 2, 480, 'DISCIPLINA: SISTEMAS MULTIMIDIA', {
-      fontFamily: FONT, fontSize: '10px', color: '#5d6d7e'
+    this.add.text(W / 2, 450, 'DISCIPLINA: SISTEMAS MULTIMIDIA', {
+      fontFamily: FONT, fontSize: '11px', color: '#5d6d7e'
     }).setOrigin(0.5);
 
     const back = this.add.rectangle(W / 2, H - 44, 220, 44, 0x7f8c8d, 0.9)

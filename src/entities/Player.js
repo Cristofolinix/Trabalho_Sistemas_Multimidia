@@ -9,10 +9,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    // Sprite tem 42×60 px (14×20 grid × px3). Hitbox menor e centrada.
+    // Sprite tem 48×66 px (16×22 grid × px3). Hitbox menor e centrada.
     this.setCollideWorldBounds(false);
-    this.body.setSize(26, 52);
-    this.body.setOffset(8, 8);
+    this.body.setSize(30, 58);
+    this.body.setOffset(9, 6);
 
     // Atributos
     this.hp = 4;

@@ -41,9 +41,9 @@ export class TitleScene extends Phaser.Scene {
     }).setOrigin(0.5).setStroke('#7a4f00', 5);
 
     // ── Botões ───────────────────────────────────────────────────────────
-    this._button(W / 2, 400, 'INICIAR',     0x27ae60, () => this.scene.start('MenuScene'));
-    this._button(W / 2, 466, 'COMO JOGAR',  0x2980b9, () => this.scene.start('HowToPlayScene'));
-    this._button(W / 2, 532, 'CREDITOS',    0x8e44ad, () => this.scene.start('CreditsScene'));
+    this._button(W / 2, 400, 'INICIAR',   0x27ae60, () => this.scene.start('MenuScene'));
+    this._button(W / 2, 466, 'SOBRE',     0x2980b9, () => this.scene.start('AboutScene'));
+    this._button(W / 2, 532, 'CREDITOS',  0x8e44ad, () => this.scene.start('CreditsScene'));
 
     // Rodapé
     this.add.text(W / 2, H - 22, 'TRABALHO DE SISTEMAS MULTIMIDIA  -  v0.2', {

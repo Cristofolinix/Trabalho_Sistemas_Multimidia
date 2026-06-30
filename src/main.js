@@ -4,7 +4,7 @@ import { TitleScene      } from './scenes/TitleScene.js';
 import { MenuScene       } from './scenes/MenuScene.js';
 import { Level1Scene     } from './scenes/Level1Scene.js';
 import { WinScene        } from './scenes/WinScene.js';
-import { HowToPlayScene  } from './scenes/HowToPlayScene.js';
+import { AboutScene      } from './scenes/AboutScene.js';
 import { CreditsScene    } from './scenes/CreditsScene.js';
 
 // Resolução interna do jogo. O Scale Manager (FIT) escala isto para
@@ -37,7 +37,7 @@ const config = {
     MenuScene,       // seleção de personagem
     Level1Scene,     // fase 1
     WinScene,        // vitória
-    HowToPlayScene,  // como jogar
+    AboutScene,      // sobre (como jogar + inimigos)
     CreditsScene,    // créditos
   ]
 };
