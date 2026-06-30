@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { BootScene   } from './scenes/BootScene.js';
+import { MenuScene   } from './scenes/MenuScene.js';
 import { Level1Scene } from './scenes/Level1Scene.js';
 import { WinScene    } from './scenes/WinScene.js';
 
@@ -19,7 +20,8 @@ const config = {
   },
   scene: [
     BootScene,    // 1° — gera texturas placeholder
-    Level1Scene,  // 2° — fase 1 (vertical slice)
+    MenuScene,    // 2° — seleção de personagem
+    Level1Scene,  // 3° — fase 1 (vertical slice)
     WinScene      // tela de vitória temporária
   ]
 };
