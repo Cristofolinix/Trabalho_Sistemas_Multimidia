@@ -35,6 +35,7 @@ export class Level1Scene extends Phaser.Scene {
     this.spikes    = this.physics.add.staticGroup();
     this.enemies   = this.physics.add.group({ classType: Enemy, runChildUpdate: true });
     this.keyGroup  = this.physics.add.group({ classType: Key, runChildUpdate: false });
+    this.vomits    = this.physics.add.group();   // projéteis de vômito da Ressaca
 
     this._buildLevel();
 
@@ -59,12 +60,36 @@ export class Level1Scene extends Phaser.Scene {
     this.physics.add.collider(this.enemies, this.platforms);
 
     this.physics.add.overlap(this.player, this.enemies, (pl, en) => {
+      if (pl.grabbed) return;                         // já está sendo carregado
+      // Galinha (trote) em modo de caça: agarra em vez de só dar dano
+      if (en.type === 'trote' && !pl.invincible && en.canGrab()) {
+        en.grab(pl);
+        return;
+      }
       pl.takeDamage(en.damage);
       // empurrão ao tomar dano
       pl.setVelocity((pl.x < en.x ? -1 : 1) * 220, -260);
     });
 
-    this.physics.add.overlap(this.player, this.spikes, () => this._hurtAndRespawn());
+    // Espinhos: não machucam enquanto o jogador está sendo carregado
+    // (o dano vem quando a galinha o joga dentro do buraco)
+    this.physics.add.overlap(this.player, this.spikes, () => {
+      if (this.player.grabbed) return;
+      this._hurtAndRespawn();
+    });
+
+    // Vômito acerta o jogador → fica enjoado (10s)
+    this.physics.add.overlap(this.player, this.vomits, (pl, v) => {
+      if (!v.active) return;
+      this._splat(v.x, v.y);
+      v.destroy();
+      pl.applyNausea(10000);
+    });
+    // Vômito bate no chão/plataforma → espirra e some
+    this.physics.add.collider(this.vomits, this.platforms, (v) => {
+      this._splat(v.x, v.y);
+      v.destroy();
+    });
 
     this.physics.add.overlap(this.player, this.keyGroup, (_p, k) => k.collect());
     this.events.on('keyCollected', () => {
@@ -111,6 +136,17 @@ export class Level1Scene extends Phaser.Scene {
     this.bg.tilePositionX    = sx * 0.10;
     this.cityBg.tilePositionX = sx * 0.30;
     this.player.update(delta);
+
+    // ── Efeito de náusea: câmera balançando (jogador tonto) ───────────────
+    // Rotação suave em onda + leve zoom (>1 esconde os cantos ao girar).
+    const cam = this.cameras.main;
+    if (this.player.nauseaTimer > 0) {
+      cam.setRotation(Math.sin(time / 90) * 0.02);
+      cam.setZoom(1.05 + Math.sin(time / 220) * 0.015);
+    } else if (cam.rotation !== 0 || cam.zoom !== 1) {
+      cam.setRotation(0);
+      cam.setZoom(1);
+    }
 
     // Atualiza checkpoint sempre que estiver pisando em piso sólido.
     // (blocked.down só é true sobre uma plataforma/chão, nunca sobre um buraco,
@@ -266,8 +302,13 @@ export class Level1Scene extends Phaser.Scene {
       this._addPlatform(x, GROUND, t));
 
     // -- spikes no fundo de cada buraco --
-    [[1300, 1560], [2500, 2760], [3700, 3960], [5000, 5260]].forEach(([a, b]) =>
-      this._addSpikes(a, b, 688));
+    const pits = [[1300, 1560], [2500, 2760], [3700, 3960], [5000, 5260]];
+    pits.forEach(([a, b]) => this._addSpikes(a, b, 688));
+
+    // Armadilhas: as galinhas (trote) carregam o jogador até a beira destes
+    // buracos e o jogam dentro. Guardamos os intervalos X para o Enemy escolher
+    // a armadilha mais próxima.
+    this.traps = pits.map(([x1, x2]) => ({ x1, x2 }));
 
     // -- spikes de superfície (obstáculos a pular) --
     this._addSpikes(4380, 4460, 608);
@@ -334,6 +375,29 @@ export class Level1Scene extends Phaser.Scene {
 
   _addEnemy(x, y, leftX, rightX, type) {
     this.enemies.add(new Enemy(this, x, y, leftX, rightX, type), true);
+  }
+
+  // Cria um projétil de vômito saindo da "boca" do zumbi em direção ao jogador.
+  // Tem gravidade (faz um arco) e some ao bater no chão ou após um tempo.
+  spawnVomit(enemy, player) {
+    const dir = player.x >= enemy.x ? 1 : -1;
+    const v = this.vomits.create(enemy.x + dir * 14, enemy.y - 6, 'vomit');
+    v.setDepth(12);
+    v.body.setAllowGravity(true);
+    v.body.setSize(10, 12);
+    v.setVelocity(dir * 260, -180);   // arremesso em arco
+    audio.sfx('vomit');
+    this.time.delayedCall(2600, () => { if (v.active) v.destroy(); });
+  }
+
+  // Espirro do vômito ao acertar algo
+  _splat(x, y) {
+    const s = this.add.particles(x, y, 'vomit', {
+      lifespan: 350, speed: { min: 40, max: 120 },
+      scale: { start: 0.6, end: 0 }, quantity: 6, gravityY: 300
+    }).setDepth(12);
+    s.explode(6, x, y);
+    this.time.delayedCall(400, () => s.destroy());
   }
 
   _addKey(x, y) {
@@ -415,6 +479,13 @@ export class Level1Scene extends Phaser.Scene {
     this.player.takeDamage(1);   // tira 1 coração (não cura)
     this.cameras.main.shake(200, 0.012);
     if (this.player.isAlive) {
+      // Limpa estados especiais para não renascer enjoado/agarrado
+      this.player.nauseaTimer = 0;
+      this.player.grabbed = false;
+      this.player.body.setAllowGravity(true);
+      this.player.clearTint();
+      this.cameras.main.setRotation(0);
+      this.cameras.main.setZoom(1);
       this.player.setPosition(this.checkpoint.x, this.checkpoint.y);
       this.player.setVelocity(0, 0);
     }

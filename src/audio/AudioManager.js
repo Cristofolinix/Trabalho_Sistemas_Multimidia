@@ -66,6 +66,16 @@ class AudioManager {
                         this.tone({ freq: f, dur: 0.2, delay: i * 0.13, type: 'triangle', vol: 0.2 })); break;
       case 'die':     [440, 330, 247, 147].forEach((f, i) =>
                         this.tone({ freq: f, dur: 0.22, delay: i * 0.11, type: 'sawtooth', vol: 0.2 })); break;
+      // Galinha agarrando o jogador (cacarejo rápido subindo)
+      case 'grab':    this.tone({ freq: 300, slideTo: 620, dur: 0.09, type: 'square', vol: 0.18 });
+                      this.tone({ freq: 360, slideTo: 700, dur: 0.09, delay: 0.1, type: 'square', vol: 0.16 }); break;
+      // Arremesso do jogador na armadilha (whoosh grave)
+      case 'throw':   this.tone({ freq: 520, slideTo: 120, dur: 0.22, type: 'sawtooth', vol: 0.2 }); break;
+      // Zumbi cuspindo vômito (jato "molhado" grave)
+      case 'vomit':   this.tone({ freq: 180, slideTo: 60, dur: 0.28, type: 'sawtooth', vol: 0.2 }); break;
+      // Jogador fica enjoado (tom instável/ondulado)
+      case 'nausea':  this.tone({ freq: 240, slideTo: 180, dur: 0.4, type: 'sine', vol: 0.2 });
+                      this.tone({ freq: 200, slideTo: 260, dur: 0.4, delay: 0.15, type: 'sine', vol: 0.16 }); break;
     }
   }
 

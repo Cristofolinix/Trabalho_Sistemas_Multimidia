@@ -28,6 +28,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.abilityCooldown = 0;
     this.abilityMaxCooldown = config.abilityCooldown ?? 1500;
 
+    // ── Estados especiais causados por inimigos ──────────────────────────
+    // Náusea (vômito do zumbi): enquanto > 0, os controles esquerda/direita
+    // ficam invertidos e a câmera balança (efeito tratado na cena).
+    this.nauseaTimer = 0;
+    // Agarrado (galinha do trote): input desativado; a galinha posiciona o
+    // jogador enquanto o carrega até a armadilha.
+    this.grabbed = false;
+
     // Pulo com coyote-time e jump-buffer (sensação mais responsiva)
     this.coyote = 0;        // ms desde que saiu do chão
     this.jumpBuffer = 0;    // ms desde que apertou pulo
@@ -45,14 +53,30 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   update(delta) {
     if (!this.isAlive) return;
 
+    // Enquanto agarrado pela galinha, o jogador não se controla: a própria
+    // galinha define a posição dele (ver Enemy.js, estado 'carry').
+    if (this.grabbed) return;
+
     const onGround = this.body.blocked.down || this.body.touching.down;
     const speed = this.config.speed;
 
     if (this.abilityCooldown > 0) this.abilityCooldown -= delta;
 
+    // Conta regressiva da náusea (vômito do zumbi)
+    if (this.nauseaTimer > 0) {
+      this.nauseaTimer -= delta;
+      if (this.nauseaTimer <= 0) {
+        this.nauseaTimer = 0;
+        this.clearTint();   // volta à cor normal quando passa o enjoo
+      }
+    }
+
     // ── Movimento horizontal ──────────────────────────────────────────────
-    const left  = this.cursors.left.isDown  || this.wasd.left.isDown;
-    const right = this.cursors.right.isDown || this.wasd.right.isDown;
+    let left  = this.cursors.left.isDown  || this.wasd.left.isDown;
+    let right = this.cursors.right.isDown || this.wasd.right.isDown;
+
+    // Náusea: inverte esquerda ↔ direita (frente vira trás e vice-versa)
+    if (this.nauseaTimer > 0) { const tmp = left; left = right; right = tmp; }
 
     if (left && !this._dashActive) {
       this.setVelocityX(-speed);
@@ -244,6 +268,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
+  // Aplica o estado de náusea (chamado quando o vômito do zumbi acerta).
+  // Enquanto ativo: controles invertidos + câmera balançando (efeito na cena).
+  applyNausea(ms = 10000) {
+    if (!this.isAlive) return;
+    const wasHealthy = this.nauseaTimer <= 0;
+    this.nauseaTimer = ms;                 // renova sempre para 10s
+    this.setTint(0x9be36b);                // tom esverdeado de enjoo
+    if (wasHealthy) {
+      audio.sfx('nausea');
+      this._showAbilityText('ENJOADO!');   // aviso flutuante
+    }
+  }
+
   takeDamage(amount = 1) {
     if (this.invincible || !this.isAlive) return;
     this.hp -= amount;
@@ -268,6 +305,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.isAlive = true;
     this.invincible = false;
     this.alpha = 1;
+    // Limpa estados especiais para não renascer enjoado/agarrado
+    this.nauseaTimer = 0;
+    this.grabbed = false;
+    this.body.setAllowGravity(true);
+    this.clearTint();
     this.setPosition(x, y);
     this.setVelocity(0, 0);
   }

@@ -141,6 +141,16 @@ export class BootScene extends Phaser.Scene {
       '.BBB.', 'BBBBB', 'BBwBB', 'BBBBB', '.BBB.',
     ], { ...PAL, w: 0xaed6f1 });
 
+    // ── Vômito (projétil do zumbi Ressaca) — gota verde doentia ──
+    makeTexture(this, 'vomit', 3, [
+      '.ZZ.',
+      'ZZZZ',
+      'ZzzZ',
+      'ZZZZ',
+      '.ZZ.',
+      '..Z.',
+    ], { ...PAL, Z: 0x8bc34a, z: 0x558b2f });
+
     // ── Estrela verde simétrica (logo UNEMAT) ──
     const starPal = { X: 0x2e8b3d, x: 0x256d30 };
     makeTexture(this, 'star_green', 5, [
