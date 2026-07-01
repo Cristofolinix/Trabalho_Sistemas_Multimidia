@@ -16,8 +16,10 @@ abrir a **porta** para avançar.
 - Build de produção: `npm run build`.
 
 ## Local do projeto e Git
-- Pasta de trabalho: `C:\Users\alexc\Desktop\jogo-multimidia`
-  (foi movida do Google Drive porque o sync do Drive corrompia `node_modules`).
+- A pasta de trabalho VARIA por máquina (o projeto é sincronizado só via Git, não pelo caminho).
+  Em cada máquina nova: `git clone`, instalar Node.js (se não tiver) e rodar `npm install`
+  (o `node_modules/` é local ao projeto e está no `.gitignore`).
+- NÃO deixar o projeto dentro de pasta sincronizada por Google Drive/OneDrive (corrompe `node_modules`).
 - Repositório: `https://github.com/Cristofolinix/Trabalho_Sistemas_Multimidia` (branch `master`).
 - Fluxo: trabalhar tudo direto no `master`. `git add -A` → `git commit -m "..."` → `git push`.
 
@@ -34,7 +36,8 @@ src/
     pixelArt.js            # makeTexture(): gera texturas a partir de grades ASCII + paleta PAL
   entities/
     Player.js              # jogador animado + 4 habilidades (soco/tiro/onda/dash)
-    Enemy.js               # inimigo por tipo (ressaca/trote), patrulha + anima
+    Enemy.js               # inimigo por tipo + IA: trote persegue/agarra/arrasta/arremessa;
+                           #   ressaca patrulha e cospe vômito (máquina de estados)
     Key.js                 # chave coletável (flutua, brilho)
     Door.js                # porta final (exige 3 chaves)
   scenes/
@@ -53,7 +56,8 @@ public/assets/             # PNGs dos sprites (Pixel Adventure, Pixel Frog, CC0)
 - Personagens e inimigos usam **Pixel Adventure** de **Pixel Frog** (licença **CC0**),
   baixados de um espelho no GitHub (`Spellthorn/pixel_adventure`) para `public/assets/`.
 - Mapeamento de personagens: Hugo→Ninja Frog, Alex→Virtual Guy, Berto→Pink Man, Weverton→Mask Dude.
-- Inimigos atuais: **Ressaca→Snail (lento)**, **Trote→Chicken (rápido)**.
+- Inimigos: **Ressaca** (sprite atual = Snail; será trocado por ZUMBI, ver abaixo) e
+  **Trote → Chicken** (mantém a galinha). O COMPORTAMENTO já foi reescrito (ver "Onde paramos").
 - Itens/cenário/HUD (chave, porta, tiles, spikes, corações, estrela, confete, fundos) são
   desenhados por código em `pixelArt.js`/`BootScene.js`.
 - IMPORTANTE: não há gerador de imagens no ambiente do Claude Code; sprites detalhados
@@ -64,10 +68,14 @@ public/assets/             # PNGs dos sprites (Pixel Adventure, Pixel Frog, CC0)
 - Música de fundo em loop + SFX (pulo, dano, morte, chave, seleção/confirmação, porta,
   vitória, e um som por habilidade). Precisa de gesto do usuário para iniciar (regra dos
   navegadores) — é desbloqueado no primeiro clique/tecla da TitleScene. Tecla **M** = mudo.
+- SFX novos (sessão atual): `grab` (galinha agarra), `throw` (arremesso na armadilha),
+  `vomit` (cuspe do zumbi), `nausea` (jogador enjoa).
 
 ## Controles
 - Mover: ←→ ou A/D | Pular: ↑, W ou Espaço | Habilidade: F | Pausa: ESC | Mudo: M
 - Pulo com coyote-time e jump-buffer; checkpoint automático em piso sólido; cair/spike tira 1 coração.
+- **Náusea (novo):** quando o vômito do zumbi acerta, por 10s os controles esquerda/direita
+  ficam invertidos e a câmera balança (rotação em onda + leve zoom). Some ao respawnar.
 
 ## Level design da Fase 1 (tema "Calourada" = festa de recepção dos calouros)
 - Mundo 6400×720. Rota alta e rota baixa. 3 chaves em plataformas alcançáveis
@@ -83,14 +91,59 @@ public/assets/             # PNGs dos sprites (Pixel Adventure, Pixel Frog, CC0)
 - Dificuldade deve ser desafiadora, mas a fase sempre precisa ser POSSÍVEL de completar.
 - Comentários didáticos no código (o usuário precisa explicar na apresentação).
 
-## Pendências em aberto (aguardando decisão do usuário)
-1. **Inimigos que "façam sentido"**: galinha/lesma não convencem. Opções levantadas:
-   (a) Zumbi para Ressaca + veterano que persegue para Trote (buscar zumbi CC0);
-   (b) outros bichos do mesmo pack (porco que investe / fantasma que paira);
-   (c) usuário fornece os sprites.
-2. **Personagens parecidos com o usuário e 3 colegas**: precisa das descrições físicas
-   (cor de pele/cabelo, barba, óculos, roupa) de Hugo, Alex, Berto e Weverton. Decidir também
-   se mantém o estilo "mascarado" atual (só ajusta cor) ou troca para personagens humanos (com rosto).
+## ════════════════════════════════════════════════════════════════════════
+## ONDE PARAMOS (sessão de 01/07/2026) — LEIA PARA CONTINUAR
+## ════════════════════════════════════════════════════════════════════════
+
+### Já FEITO e commitado/pushado nesta sessão (commit `feat: IA dos inimigos...`)
+- **Trote (galinha)**: agora PERSEGUE o jogador; ao encostar, AGARRA, carrega o jogador
+  até a beira da armadilha (buraco com espinhos) mais próxima e o JOGA dentro.
+  Máquina de estados em `Enemy.js`: patrol → chase → carry → return.
+- **Ressaca (zumbi)**: CUSPE VÔMITO em arco no jogador (auto-mira quando ele está no alcance).
+  Ao acertar → jogador ENJOA por 10s: controles invertidos + câmera balançando (efeito em
+  `Level1Scene.update`) + tint verde + texto "ENJOADO!".
+- Suporte no `Player.js` (estados `nauseaTimer` e `grabbed`), grupo `vomits` e `traps` em
+  `Level1Scene.js`, novos SFX no `AudioManager.js`.
+- `.gitignore` passou a ignorar a pasta local `.claude/`.
+- Tudo testado rodando o jogo (Vite) — sem erros de runtime.
+
+### PENDENTE — trocar os SPRITES (comportamento já pronto, falta só a arte)
+O usuário decidiu: **Ressaca = baixar zumbi CC0**; **Jogadores = buscar pack CC0 de humanos**.
+Assets são baixados por download direto do **OpenGameArt** (tem URL de arquivo direta) e
+depois VISUALIZADOS com a ferramenta de leitura de imagem para descobrir o layout dos frames
+antes de fatiar. (itch.io geralmente não dá link direto, evitar.)
+
+1. **Sprite do ZUMBI (Ressaca)** — candidato CC0 já avaliado e aprovado visualmente:
+   - Pack: "128x128 2D Zombies Spritesheet" (CC0) — https://opengameart.org/content/128x128-2d-zombies-spritesheet
+   - Arquivo bom: `zombie_typeA_walk_spritesheet.png` (garoto de pele verde, camisa com coração)
+     https://opengameart.org/sites/default/files/zombie_typeA_walk_spritesheet.png
+     → strip HORIZONTAL de 4 frames de caminhada, vista lateral. Dá pra usar direto.
+   - TODO: baixar para `public/assets/enemy_ressaca_walk.png` (ou novo nome), ajustar em
+     `BootScene.js` o `frameWidth/frameHeight` (ver dimensões reais do PNG) e a animação
+     `ressaca-walk`, e conferir `scale/body/offset` no TYPES.ressaca de `Enemy.js`.
+   - Obs.: estilo é cartoon suave (não pixel puro); como o jogo usa `pixelArt:true`, checar
+     se ao escalar fica aceitável. Alternativa top-down CC0 (pior): zombie_n_skeleton2.png.
+
+2. **Sprites dos 4 JOGADORES (humanos CC0)** — AINDA NÃO buscado um pack definitivo.
+   Roupas que o usuário pediu (para aproximar cada personagem):
+   - **Hugo**: de shorts.
+   - **Alex**: calça e jaqueta pretas.
+   - **Berto**: calça jeans e óculos.
+   - **Weverton**: topete e camisa verde.
+   O usuário aceitou que as roupas podem NÃO bater exatamente. Precisa de idle/run/jump/fall
+   por personagem (ver STATES em `BootScene.js`). Hoje usam Pixel Adventure 32×32; ao trocar,
+   ajustar `BootScene` (load + anims), `Player.js` (scale/hitbox) e `characters.js` se preciso.
+   Mapeamento de cor atual em `characters.js`: Hugo=vermelho, Alex=azul, Berto=verde, Weverton=laranja.
+
+### Dica de teste (dev)
+Phaser não expõe o jogo no `window`. Para testar cenas via console/eval, adicione
+temporariamente em `main.js`: `if (import.meta.env.DEV) window.__game = <a instância>;`
+e depois `window.__game.scene.start('Level1Scene', { char: 'hugo' })`. REMOVER antes de commitar.
+
+## Preferências do usuário reforçadas nesta sessão
+- Continua valendo: commit/push no `master` a cada bloco; textos abstraem o briefing;
+  luzes = canhões de luz; fase sempre possível; comentários didáticos no código.
+- **Avisar sobre decisões que dependem do usuário em vez de assumir.**
 
 ## Próximos passos planejados (do briefing, ainda NÃO feitos)
 - Fases 2 (dessaturada/tensa) e 3 (tempestade) com dificuldade crescente.
