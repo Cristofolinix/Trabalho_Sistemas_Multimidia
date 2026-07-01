@@ -1,4 +1,5 @@
 import { FONT } from '../config/theme.js';
+import { audio } from '../audio/AudioManager.js';
 
 export class WinScene extends Phaser.Scene {
   constructor() { super({ key: 'WinScene' }); }
@@ -6,6 +7,7 @@ export class WinScene extends Phaser.Scene {
   create() {
     const W = this.scale.width, H = this.scale.height;
     this.add.rectangle(W / 2, H / 2, W, H, 0x1a1a2e);
+    audio.sfx('win');
 
     // Estrela verde comemorativa
     const star = this.add.image(W / 2, 130, 'star_green').setScale(2.2);

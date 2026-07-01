@@ -6,6 +6,7 @@ import { Level1Scene     } from './scenes/Level1Scene.js';
 import { WinScene        } from './scenes/WinScene.js';
 import { AboutScene      } from './scenes/AboutScene.js';
 import { CreditsScene    } from './scenes/CreditsScene.js';
+import { PauseScene      } from './scenes/PauseScene.js';
 
 // Resolução interna do jogo. O Scale Manager (FIT) escala isto para
 // preencher a janela do navegador mantendo a proporção 16:9.
@@ -39,6 +40,7 @@ const config = {
     WinScene,        // vitória
     AboutScene,      // sobre (como jogar + inimigos)
     CreditsScene,    // créditos
+    PauseScene,      // menu de pausa (sobreposto)
   ]
 };
 

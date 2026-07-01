@@ -1,4 +1,5 @@
 import { FONT, COLORS } from '../config/theme.js';
+import { audio } from '../audio/AudioManager.js';
 
 // Tela inicial — logo UNEMAT pixelada + título do jogo + menu.
 export class TitleScene extends Phaser.Scene {
@@ -7,6 +8,12 @@ export class TitleScene extends Phaser.Scene {
   create() {
     const W = this.scale.width;
     const H = this.scale.height;
+
+    // Áudio só pode iniciar após um gesto do usuário (regra dos navegadores)
+    const startAudio = () => { audio.unlock(); audio.startMusic(); };
+    this.input.once('pointerdown', startAudio);
+    this.input.keyboard.once('keydown', startAudio);
+    this.input.keyboard.on('keydown-M', () => audio.toggleMute());
 
     // ── Fundo de estrelas com leve movimento ─────────────────────────────
     this.bg = this.add.tileSprite(0, 0, W, H, 'star_bg').setOrigin(0, 0).setTileScale(2);
@@ -65,6 +72,7 @@ export class TitleScene extends Phaser.Scene {
 
     btn.on('pointerover', () => {
       btn.setFillStyle(color, 1);
+      audio.sfx('select');
       this.tweens.add({ targets: [btn, txt], scaleX: 1.06, scaleY: 1.06, duration: 80 });
     });
     btn.on('pointerout', () => {
@@ -72,6 +80,7 @@ export class TitleScene extends Phaser.Scene {
       this.tweens.add({ targets: [btn, txt], scaleX: 1, scaleY: 1, duration: 80 });
     });
     btn.on('pointerdown', () => {
+      audio.sfx('confirm');
       this.cameras.main.flash(180, 255, 255, 255);
       this.time.delayedCall(120, cb);
     });

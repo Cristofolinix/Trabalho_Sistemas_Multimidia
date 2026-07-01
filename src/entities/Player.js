@@ -1,5 +1,6 @@
-// Jogador. Cada personagem tem sua própria textura (player_<key>),
-// com a cor da camisa já embutida — sem tint, para preservar os detalhes.
+import { audio } from '../audio/AudioManager.js';
+
+// Jogador. Sprite animado (Pixel Adventure) + habilidade especial por personagem.
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, config) {
     super(scene, x, y, `${config.key}_idle`, 0);
@@ -76,6 +77,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.setVelocityY(this.config.jumpVelocity);
       this.jumpBuffer = 0;
       this.coyote = 0;
+      audio.sfx('jump');
     }
 
     // ── Animação por estado ───────────────────────────────────────────────
@@ -104,62 +106,131 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
+  // Hugo — soco: arco de impacto + faíscas, derruba inimigo à frente
   _abilityHugo() {
+    audio.sfx('punch');
     const dir = this.flipX ? -1 : 1;
-    const hitbox = this.scene.add.rectangle(this.x + dir * 44, this.y, 44, 40, 0xe74c3c, 0.6);
-    this.scene.time.addEvent({
-      delay: 40, repeat: 6,
-      callback: () => {
-        this.scene.enemies?.getChildren().forEach(e => {
-          if (e.active && Phaser.Geom.Intersects.RectangleToRectangle(hitbox.getBounds(), e.getBounds())) {
-            e.kill();
-          }
-        });
-      }
+    const cx = this.x + dir * 40, cy = this.y;
+
+    // Arco do golpe (graphics) que cresce e some
+    const arc = this.scene.add.graphics().setDepth(15);
+    let r = 14;
+    const drawArc = () => {
+      arc.clear();
+      arc.lineStyle(5, 0xffe08a, 0.9);
+      const a0 = dir > 0 ? -0.9 : Math.PI + 0.9;
+      const a1 = dir > 0 ? 0.9  : Math.PI - 0.9;
+      arc.beginPath(); arc.arc(cx, cy, r, a0, a1, dir < 0); arc.strokePath();
+    };
+    this.scene.tweens.addCounter({
+      from: 14, to: 46, duration: 200,
+      onUpdate: t => { r = t.getValue(); drawArc(); },
+      onComplete: () => arc.destroy()
     });
-    this.scene.time.delayedCall(280, () => hitbox.destroy());
+
+    // Faíscas no impacto
+    this._sparks(cx + dir * 10, cy, dir);
+
+    // Hitbox de dano por alguns frames
+    const hitbox = new Phaser.Geom.Rectangle(cx - 26, cy - 24, 52, 48);
+    this.scene.time.addEvent({
+      delay: 30, repeat: 6,
+      callback: () => this.scene.enemies?.getChildren().forEach(e => {
+        if (e.active && Phaser.Geom.Intersects.RectangleToRectangle(hitbox, e.getBounds())) {
+          this.scene.cameras.main.shake(120, 0.006);
+          e.kill();
+        }
+      })
+    });
     this._showAbilityText('SOCO!');
   }
 
+  // Alex — projétil com rastro de partículas e clarão de saída
   _abilityAlex() {
+    audio.sfx('shoot');
     const dir = this.flipX ? -1 : 1;
-    const proj = this.scene.physics.add.image(this.x + dir * 24, this.y, 'projectile');
+    const proj = this.scene.physics.add.image(this.x + dir * 26, this.y, 'projectile').setDepth(12);
     proj.body.setAllowGravity(false);
-    proj.setVelocityX(dir * 560);
-    this.scene.physics.add.overlap(proj, this.scene.enemies, (p, e) => { e.kill(); p.destroy(); });
-    this.scene.time.delayedCall(1600, () => proj.destroy());
+    proj.setVelocityX(dir * 620);
+
+    // clarão de saída
+    const flash = this.scene.add.circle(this.x + dir * 26, this.y, 12, 0xaed6f1, 0.8).setDepth(12);
+    this.scene.tweens.add({ targets: flash, scale: 2, alpha: 0, duration: 180, onComplete: () => flash.destroy() });
+
+    // rastro de partículas seguindo o projétil
+    const trail = this.scene.add.particles(0, 0, 'spark', {
+      follow: proj, lifespan: 240, scale: { start: 0.7, end: 0 },
+      speed: 20, frequency: 18, tint: 0x5ad1ff, blendMode: 'ADD'
+    }).setDepth(11);
+
+    const stop = () => { trail.destroy(); proj.destroy(); };
+    this.scene.physics.add.overlap(proj, this.scene.enemies, (p, e) => { e.kill(); this._sparks(p.x, p.y, dir); stop(); });
+    this.scene.time.delayedCall(1500, stop);
     this._showAbilityText('TIRO!');
   }
 
+  // Berto — onda de área: anéis concêntricos + faíscas + tremor
   _abilityBerto() {
-    const circle = this.scene.add.circle(this.x, this.y, 10, 0x2ecc71, 0.4);
+    audio.sfx('wave');
+    this.scene.cameras.main.shake(180, 0.008);
+    for (let k = 0; k < 3; k++) {
+      const ring = this.scene.add.circle(this.x, this.y, 10, 0x2ecc71, 0).setStrokeStyle(4, 0x6aff8a, 0.9).setDepth(13);
+      this.scene.tweens.add({
+        targets: ring, scale: 9, alpha: 0, duration: 480, delay: k * 90,
+        onComplete: () => ring.destroy()
+      });
+    }
+    // dano em raio crescente
+    const dmg = this.scene.add.circle(this.x, this.y, 10, 0, 0);
     this.scene.tweens.add({
-      targets: circle, scaleX: 12, scaleY: 12, alpha: 0, duration: 450,
-      onUpdate: () => {
-        this.scene.enemies?.getChildren().forEach(e => {
-          if (e.active && Phaser.Math.Distance.Between(this.x, this.y, e.x, e.y) < circle.radius * circle.scaleX) {
-            e.kill();
-          }
-        });
-      },
-      onComplete: () => circle.destroy()
+      targets: dmg, radius: 150, duration: 420,
+      onUpdate: () => this.scene.enemies?.getChildren().forEach(e => {
+        if (e.active && Phaser.Math.Distance.Between(this.x, this.y, e.x, e.y) < dmg.radius) e.kill();
+      }),
+      onComplete: () => dmg.destroy()
     });
+    this._sparks(this.x, this.y, 0);
     this._showAbilityText('ONDA!');
   }
 
+  // Weverton — dash com fantasmas (afterimage) e invencibilidade breve
   _abilityWeverton() {
     if (this._dashActive) return;
+    audio.sfx('dash');
     this._dashActive = true;
     const dir = this.flipX ? -1 : 1;
-    this.setVelocityX(dir * 760);
-    this.invincible = true;       // breve invencibilidade no dash
-    this.setAlpha(0.6);
-    this.scene.time.delayedCall(220, () => {
+    this.setVelocityX(dir * 820);
+    this.invincible = true;
+    this.setAlpha(0.7);
+
+    // fantasmas que somem (afterimage)
+    const ghost = this.scene.time.addEvent({
+      delay: 35, repeat: 5,
+      callback: () => {
+        const g = this.scene.add.image(this.x, this.y, this.texture.key, this.frame.name)
+          .setScale(1.8).setFlipX(this.flipX).setAlpha(0.5).setTint(0xf39c12).setDepth(this.depth - 1);
+        this.scene.tweens.add({ targets: g, alpha: 0, duration: 260, onComplete: () => g.destroy() });
+      }
+    });
+
+    this.scene.time.delayedCall(240, () => {
       this._dashActive = false;
       this.invincible = false;
       this.setAlpha(1);
+      ghost.remove();
     });
     this._showAbilityText('DASH!');
+  }
+
+  // Pequena explosão de faíscas
+  _sparks(x, y, dir) {
+    const e = this.scene.add.particles(x, y, 'spark', {
+      lifespan: 350, speed: { min: 80, max: 220 },
+      angle: dir === 0 ? { min: 0, max: 360 } : (dir > 0 ? { min: -60, max: 60 } : { min: 120, max: 240 }),
+      scale: { start: 1, end: 0 }, quantity: 10, tint: 0xffe08a, blendMode: 'ADD'
+    }).setDepth(16);
+    e.explode(10, x, y);
+    this.scene.time.delayedCall(400, () => e.destroy());
   }
 
   _showAbilityText(msg) {
@@ -176,6 +247,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   takeDamage(amount = 1) {
     if (this.invincible || !this.isAlive) return;
     this.hp -= amount;
+    audio.sfx('hurt');
     if (this.hp <= 0) { this.die(); return; }
 
     this.invincible = true;

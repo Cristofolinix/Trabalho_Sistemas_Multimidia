@@ -179,6 +179,12 @@ export class BootScene extends Phaser.Scene {
     cf.fillStyle(0xffffff, 1); cf.fillRect(0, 0, 6, 6);
     cf.generateTexture('confetti', 6, 6); cf.destroy();
 
+    // ── Faísca (partícula de efeitos de habilidade) ──
+    const sp = this.make.graphics({ x: 0, y: 0, add: false });
+    sp.fillStyle(0xffffff, 1);
+    sp.fillRect(3, 0, 2, 8); sp.fillRect(0, 3, 8, 2);  // formato de brilho/+
+    sp.generateTexture('spark', 8, 8); sp.destroy();
+
     // ── Fundos procedurais ──
     this._makeStarBg();
     this._makeCityscape();

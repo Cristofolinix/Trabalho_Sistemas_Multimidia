@@ -4,6 +4,7 @@ import { Key }    from '../entities/Key.js';
 import { Door }   from '../entities/Door.js';
 import { CHARACTERS, DEFAULT_CHARACTER } from '../config/characters.js';
 import { FONT } from '../config/theme.js';
+import { audio } from '../audio/AudioManager.js';
 
 // ── Dimensões do mundo ──────────────────────────────────────────────────
 const WORLD_W   = 6400;
@@ -19,7 +20,6 @@ export class Level1Scene extends Phaser.Scene {
     this.selectedChar = data?.char ?? DEFAULT_CHARACTER;
     this.keysCollected = 0;
     this.totalKeys = 3;
-    this.isPaused = false;
   }
 
   create() {
@@ -69,6 +69,7 @@ export class Level1Scene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.keyGroup, (_p, k) => k.collect());
     this.events.on('keyCollected', () => {
       this.keysCollected++;
+      audio.sfx('key');
       this._updateKeysHUD();
       if (this.keysCollected >= this.totalKeys) this.door.open();
     });
@@ -76,7 +77,10 @@ export class Level1Scene extends Phaser.Scene {
     // ── Porta ─────────────────────────────────────────────────────────────
     this.door = new Door(this, WORLD_W - 130, GROUND - 26, this.totalKeys);
     this.physics.add.overlap(this.player, this.door, () => {
-      if (this.door.tryEnter(this.keysCollected)) this.scene.start('WinScene');
+      if (this.door.tryEnter(this.keysCollected)) {
+        audio.sfx('door');
+        this.scene.start('WinScene');
+      }
     });
 
     // ── Câmera ──────────────────────────────────────────────────────────────
@@ -85,13 +89,23 @@ export class Level1Scene extends Phaser.Scene {
 
     // ── HUD + pausa ─────────────────────────────────────────────────────────
     this._buildHUD();
-    this.input.keyboard.on('keydown-ESC', () => this._togglePause());
+    // ESC abre o menu de pausa (cena dedicada) e congela a fase
+    this.input.keyboard.on('keydown-ESC', () => {
+      audio.sfx('select');
+      this.scene.launch('PauseScene', { from: 'Level1Scene' });
+      this.scene.pause();
+    });
+    // M alterna o som
+    this.input.keyboard.on('keydown-M', () => audio.toggleMute());
+
+    // Música de fundo (garante que esteja tocando)
+    audio.unlock();
+    audio.startMusic();
 
     this.events.on('playerDied', () => this._onPlayerDied());
   }
 
   update(time, delta) {
-    if (this.isPaused) return;
     // Paralaxe (cada camada move numa velocidade diferente)
     const sx = this.cameras.main.scrollX;
     this.bg.tilePositionX    = sx * 0.10;
@@ -184,11 +198,22 @@ export class Level1Scene extends Phaser.Scene {
     this.add.text(x, y, text, {
       fontFamily: FONT, fontSize: '11px', color: '#ffe8b0'
     }).setOrigin(0.5).setDepth(-11);
-    // cordas
+    // Cordas longas subindo para fora da tela (parecem presas a postes acima)
     const g = this.add.graphics().setDepth(-13);
-    g.lineStyle(1, 0xf1c40f, 0.6);
-    g.lineBetween(x - bg.width / 2, y - 15, x - bg.width / 2 - 30, y - 60);
-    g.lineBetween(x + bg.width / 2, y - 15, x + bg.width / 2 + 30, y - 60);
+    g.lineStyle(2, 0xb0aa90, 0.5);
+    const topY = y - 320;   // bem acima do topo do viewport
+    g.lineBetween(x - bg.width / 2, y - 15, x - bg.width / 2 - 70, topY);
+    g.lineBetween(x + bg.width / 2, y - 15, x + bg.width / 2 + 70, topY);
+    // pequenas bandeirinhas penduradas nas cordas (festa)
+    const colors = [0xff5a5a, 0xffd24a, 0x5ad1ff, 0x6aff8a];
+    for (let i = 1; i <= 5; i++) {
+      const t = i / 6;
+      const fx = (x - bg.width / 2) + (-70) * t;
+      const fy = (y - 15) + (topY - (y - 15)) * t;
+      this.add.triangle(fx, fy, 0, 0, 10, 0, 5, 12, colors[i % colors.length], 0.9).setDepth(-13);
+      const fx2 = (x + bg.width / 2) + (70) * t;
+      this.add.triangle(fx2, fy, 0, 0, 10, 0, 5, 12, colors[(i + 1) % colors.length], 0.9).setDepth(-13);
+    }
   }
 
   // Caixa de som de palco (corpo + cones dos alto-falantes)
@@ -383,63 +408,22 @@ export class Level1Scene extends Phaser.Scene {
   }
 
   // ════════════════════════════════════════════════════════════════════════
-  //  DANO / RESPAWN / PAUSA
+  //  DANO / RESPAWN
   // ════════════════════════════════════════════════════════════════════════
   _hurtAndRespawn() {
     if (!this.player.isAlive || this.player.invincible) return;
     this.player.takeDamage(1);   // tira 1 coração (não cura)
     this.cameras.main.shake(200, 0.012);
     if (this.player.isAlive) {
-      // reposiciona no checkpoint preservando a vida atual
       this.player.setPosition(this.checkpoint.x, this.checkpoint.y);
       this.player.setVelocity(0, 0);
     }
   }
 
   _onPlayerDied() {
+    audio.sfx('die');
     this.cameras.main.shake(400, 0.02);
     this.cameras.main.fade(700, 0, 0, 0);
     this.time.delayedCall(800, () => this.scene.restart());
-  }
-
-  _togglePause() {
-    if (this.isPaused) { this._resume(); return; }
-
-    this.isPaused = true;
-    this.physics.world.pause();
-
-    const W = this.scale.width, H = this.scale.height;
-    this.pauseUI = this.add.container(0, 0).setScrollFactor(0).setDepth(100);
-
-    const dim = this.add.rectangle(0, 0, W, H, 0x000000, 0.7).setOrigin(0, 0);
-    const title = this.add.text(W / 2, H / 2 - 90, 'PAUSADO', {
-      fontFamily: FONT, fontSize: '28px', color: '#f1c40f'
-    }).setOrigin(0.5);
-    this.pauseUI.add([dim, title]);
-
-    this._pauseButton(W / 2, H / 2 - 10, 'CONTINUAR', 0x27ae60, () => this._resume());
-    this._pauseButton(W / 2, H / 2 + 55, 'MENU INICIAL', 0x2980b9, () => {
-      this.physics.world.resume();
-      this.scene.start('TitleScene');
-    });
-  }
-
-  _pauseButton(x, y, label, color, cb) {
-    const btn = this.add.rectangle(x, y, 280, 46, color, 0.95)
-      .setStrokeStyle(2, 0xffffff, 0.4).setInteractive({ useHandCursor: true });
-    const txt = this.add.text(x, y, label, {
-      fontFamily: FONT, fontSize: '14px', color: '#ffffff'
-    }).setOrigin(0.5);
-    btn.on('pointerover', () => btn.setScale(1.05));
-    btn.on('pointerout',  () => btn.setScale(1));
-    btn.on('pointerdown', cb);
-    this.pauseUI.add([btn, txt]);
-  }
-
-  _resume() {
-    this.isPaused = false;
-    this.physics.world.resume();
-    this.pauseUI?.destroy();
-    this.pauseUI = null;
   }
 }

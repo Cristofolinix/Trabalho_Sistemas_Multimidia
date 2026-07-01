@@ -1,5 +1,6 @@
 import { CHARACTERS } from '../config/characters.js';
 import { FONT } from '../config/theme.js';
+import { audio } from '../audio/AudioManager.js';
 
 // Seleção de personagem. ← → navega, Espaço/Enter confirma, ESC volta.
 export class MenuScene extends Phaser.Scene {
@@ -68,6 +69,7 @@ export class MenuScene extends Phaser.Scene {
 
   _move(dir) {
     this.selectedIndex = Phaser.Math.Wrap(this.selectedIndex + dir, 0, this.charKeys.length);
+    audio.sfx('select');
     this._updateSelection();
   }
 
@@ -89,6 +91,7 @@ export class MenuScene extends Phaser.Scene {
 
   _confirm() {
     const chosen = this.charKeys[this.selectedIndex];
+    audio.sfx('confirm');
     this.cameras.main.flash(220, 255, 255, 255);
     this.time.delayedCall(140, () => this.scene.start('Level1Scene', { char: chosen }));
   }
