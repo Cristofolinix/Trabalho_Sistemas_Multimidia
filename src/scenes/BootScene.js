@@ -14,7 +14,7 @@ export class BootScene extends Phaser.Scene {
           { frameWidth: 32, frameHeight: 32 }));
     });
     this.load.spritesheet('ressaca_walk', 'assets/enemy_ressaca_walk.png',
-      { frameWidth: 38, frameHeight: 24 });
+      { frameWidth: 71, frameHeight: 138 });   // zumbi CC0: 4 frames de 71x138
     this.load.spritesheet('trote_run', 'assets/enemy_trote_run.png',
       { frameWidth: 32, frameHeight: 34 });
 
@@ -49,7 +49,7 @@ export class BootScene extends Phaser.Scene {
       mk(`${c}-jump`, `${c}_jump`,  1, false);
       mk(`${c}-fall`, `${c}_fall`,  1, false);
     });
-    mk('ressaca-walk', 'ressaca_walk', 8,  true);
+    mk('ressaca-walk', 'ressaca_walk', 5,  true);   // zumbi anda devagar
     mk('trote-run',    'trote_run',    18, true);
   }
 

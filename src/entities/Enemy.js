@@ -8,7 +8,7 @@ import { audio } from '../audio/AudioManager.js';
 const TYPES = {
   ressaca: {
     sheet: 'ressaca_walk', anim: 'ressaca-walk', speed: 50, damage: 1,
-    scale: 1.9, body: [30, 14], offset: [4, 8],
+    scale: 0.5, body: [44, 120], offset: [14, 12],   // zumbi CC0 (frame 71x138)
     // Vômito
     shootRange: 340,      // distância máxima para cuspir
     shootInterval: 2200,  // intervalo entre cuspes (ms)
