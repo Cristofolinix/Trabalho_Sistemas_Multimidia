@@ -4,6 +4,7 @@ import { TitleScene      } from './scenes/TitleScene.js';
 import { MenuScene       } from './scenes/MenuScene.js';
 import { Level1Scene     } from './scenes/Level1Scene.js';
 import { WinScene        } from './scenes/WinScene.js';
+import { GameOverScene   } from './scenes/GameOverScene.js';
 import { AboutScene      } from './scenes/AboutScene.js';
 import { CreditsScene    } from './scenes/CreditsScene.js';
 import { PauseScene      } from './scenes/PauseScene.js';
@@ -38,6 +39,7 @@ const config = {
     MenuScene,       // seleção de personagem
     Level1Scene,     // fase 1
     WinScene,        // vitória
+    GameOverScene,   // derrota (vidas zeradas)
     AboutScene,      // sobre (como jogar + inimigos)
     CreditsScene,    // créditos
     PauseScene,      // menu de pausa (sobreposto)

@@ -23,6 +23,13 @@ export class Level1Scene extends Phaser.Scene {
   }
 
   create() {
+    // O emissor de eventos da cena (this.events) SOBREVIVE a scene.restart().
+    // Sem isto, cada reinício empilharia mais um listener de 'keyCollected' e
+    // 'playerDied' (o antigo continuaria ativo), fazendo o contador de chaves
+    // e a lógica de morte disparar várias vezes por evento após cada restart.
+    this.events.off('keyCollected');
+    this.events.off('playerDied');
+
     // ── Fundo da fase (clima de calourada) ───────────────────────────────
     this._buildBackground();
 
@@ -493,8 +500,11 @@ export class Level1Scene extends Phaser.Scene {
 
   _onPlayerDied() {
     audio.sfx('die');
+    audio.stopMusic();
     this.cameras.main.shake(400, 0.02);
     this.cameras.main.fade(700, 0, 0, 0);
-    this.time.delayedCall(800, () => this.scene.restart());
+    this.time.delayedCall(800, () => {
+      this.scene.start('GameOverScene', { char: this.selectedChar });
+    });
   }
 }

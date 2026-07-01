@@ -7,7 +7,7 @@ import { audio } from '../audio/AudioManager.js';
 //                         armadilha (buraco com espinhos) mais próxima e joga dentro.
 const TYPES = {
   ressaca: {
-    sheet: 'ressaca_walk', anim: 'ressaca-walk', speed: 50, damage: 1,
+    sheet: 'ressaca_walk', anim: 'ressaca-walk', speed: 36, damage: 1,   // cambaleio lento
     scale: 0.5, body: [44, 120], offset: [14, 12],   // zumbi CC0 (frame 71x138)
     // Vômito
     shootRange: 340,      // distância máxima para cuspir
@@ -77,14 +77,21 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   // ── Patrulha simples entre leftX e rightX ──────────────────────────────
   // O sprite "olha" para a esquerda por padrão; flipX = true vira para a direita.
+  // A velocidade é REAFIRMADA todo frame (não só ao virar) — sem isso, uma
+  // colisão contra a emenda entre dois blocos de chão pode zerar a velocidade
+  // e deixar o inimigo "grudado" no lugar até a próxima vez que ele alcançasse
+  // um limite (o que podia nunca acontecer).
   _patrol() {
+    if (this._dir === undefined) this._dir = 1;   // direção inicial: direita
+
     if (this.x <= this.leftX || this.body.blocked.left) {
-      this.setVelocityX(this.speed);
+      this._dir = 1;
       this.setFlipX(true);
     } else if (this.x >= this.rightX || this.body.blocked.right) {
-      this.setVelocityX(-this.speed);
+      this._dir = -1;
       this.setFlipX(false);
     }
+    this.setVelocityX(this._dir * this.speed);
   }
 
   // ════════════════════════════════════════════════════════════════════════

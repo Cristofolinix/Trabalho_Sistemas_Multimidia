@@ -79,6 +79,17 @@ class AudioManager {
     }
   }
 
+  // Jingle triste para a tela de Game Over: melodia descendente em modo menor,
+  // tocada uma única vez (não é loop).
+  gameOverJingle() {
+    const melody = [440, 415, 392, 349, 330, 294, 262];   // descendo, tom menor
+    melody.forEach((f, i) => this.tone({
+      freq: f, dur: 0.5, delay: i * 0.32, type: 'sine', vol: 0.14
+    }));
+    // acorde grave final, sustentado
+    this.tone({ freq: 131, dur: 1.6, delay: melody.length * 0.32, type: 'triangle', vol: 0.1 });
+  }
+
   // Música de fundo: loop alegre (pentatônica) com baixo — clima de festa
   startMusic() {
     if (!this._ensure() || this.musicOn) return;

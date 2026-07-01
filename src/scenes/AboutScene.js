@@ -51,8 +51,9 @@ export class AboutScene extends Phaser.Scene {
     this.add.text(rx, y, 'INIMIGOS', { fontFamily: FONT, fontSize: '14px', color: '#9b59b6' });
     y += 40;
 
-    // Ressaca
-    this.add.sprite(rx + 20, y + 14, 'ressaca_walk', 0).setScale(2).play('ressaca-walk');
+    // Ressaca (mesma escala usada no jogo — a antiga (2x) era do sprite anterior,
+    // bem menor; o zumbi CC0 atual é um frame bem maior e ficava gigante aqui)
+    this.add.sprite(rx + 20, y + 14, 'ressaca_walk', 0).setScale(0.55).play('ressaca-walk');
     this.add.text(rx + 60, y - 4, 'RESSACA', { fontFamily: FONT, fontSize: '12px', color: '#bb88dd' });
     this.add.text(rx + 60, y + 18, 'Lento e cambaleante.', { fontFamily: FONT, fontSize: '9px', color: '#bdc3c7' });
     this.add.text(rx + 60, y + 36, 'Anda devagar pelo chao.', { fontFamily: FONT, fontSize: '9px', color: '#bdc3c7' });
