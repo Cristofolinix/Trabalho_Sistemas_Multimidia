@@ -20,6 +20,15 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet('trote_run', 'assets/enemy_trote_run.png',
       { frameWidth: 32, frameHeight: 34 });
 
+    // ── Assets gerados por IA para a Fase 2 ──────────────────────────────
+    // sono e calculo: tira horizontal (4×1). trabalho e prova: grade (2×2)
+    this.load.spritesheet('enemy_sono',     'assets/enemy_sono.png',     { frameWidth: 246, frameHeight: 272 });
+    this.load.spritesheet('enemy_trabalho', 'assets/enemy_trabalho.png', { frameWidth: 438, frameHeight: 379 });
+    this.load.spritesheet('enemy_calculo',  'assets/enemy_calculo.png',  { frameWidth: 233, frameHeight: 298 });
+    this.load.spritesheet('enemy_prova',    'assets/enemy_prova.png',    { frameWidth: 412, frameHeight: 430 });
+    this.load.image('stone_tile', 'assets/stone_tile.png');
+    this.load.image('stone_platform', 'assets/stone_platform.png');
+
     // ── Texturas desenhadas por código (itens, cenário, HUD) ──────────────
     this._makeArtTextures();
   }
@@ -53,6 +62,12 @@ export class BootScene extends Phaser.Scene {
     });
     mk('ressaca-walk', 'ressaca_walk', 5,  true);   // zumbi anda devagar
     mk('trote-run',    'trote_run',    18, true);
+    
+    // Inimigos Fase 2
+    mk('sono-float', 'enemy_sono', 6, true);
+    mk('trabalho-run', 'enemy_trabalho', 8, true);
+    mk('calculo-float', 'enemy_calculo', 6, true);
+    mk('prova-float', 'enemy_prova', 6, true);
   }
 
   _makeArtTextures() {

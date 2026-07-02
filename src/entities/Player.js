@@ -47,6 +47,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Náusea (vômito do zumbi): enquanto > 0, os controles esquerda/direita
     // ficam invertidos e a câmera balança (efeito tratado na cena).
     this.nauseaTimer = 0;
+    // Lentidão (fantasma do Sono): enquanto > 0, velocidade reduzida a 30%
+    this.slowTimer = 0;
     // Agarrado (galinha do trote): input desativado; a galinha posiciona o
     // jogador enquanto o carrega até a armadilha.
     this.grabbed = false;
@@ -86,6 +88,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       }
     }
 
+    // Conta regressiva da lentidão (fantasma do Sono)
+    if (this.slowTimer > 0) {
+      this.slowTimer -= delta;
+      if (this.slowTimer <= 0) {
+        this.slowTimer = 0;
+        this.clearTint();
+      }
+    }
+
     // ── Movimento horizontal ──────────────────────────────────────────────
     let left  = this.cursors.left.isDown  || this.wasd.left.isDown;
     let right = this.cursors.right.isDown || this.wasd.right.isDown;
@@ -94,10 +105,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (this.nauseaTimer > 0) { const tmp = left; left = right; right = tmp; }
 
     if (left && !this._dashActive) {
-      this.setVelocityX(-speed);
+      this.setVelocityX(-speed * (this.slowTimer > 0 ? 0.3 : 1));
       this.setFlipX(true);
     } else if (right && !this._dashActive) {
-      this.setVelocityX(speed);
+      this.setVelocityX(speed * (this.slowTimer > 0 ? 0.3 : 1));
       this.setFlipX(false);
     } else if (!this._dashActive) {
       this.setVelocityX(this.body.velocity.x * 0.8);
@@ -284,6 +295,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
+  // Aplica lentidão (fantasma do Sono) — reduz velocidade a 30% por 4 segundos
+  applySlow(ms = 4000) {
+    if (!this.isAlive) return;
+    const wasOk = this.slowTimer <= 0;
+    this.slowTimer = Math.max(this.slowTimer, ms);
+    this.setTint(0x6688ff);  // azulado, como sono profundo
+    if (wasOk) {
+      audio.sfx('nausea');       // reutiliza o sfx de estado alterado
+      this._showAbilityText('SONO...');
+    }
+  }
+
   // Aplica o estado de náusea (chamado quando o vômito do zumbi acerta).
   // Enquanto ativo: controles invertidos + câmera balançando (efeito na cena).
   applyNausea(ms = 10000) {
@@ -323,6 +346,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.alpha = 1;
     // Limpa estados especiais para não renascer enjoado/agarrado
     this.nauseaTimer = 0;
+    this.slowTimer = 0;
     this.grabbed = false;
     this.body.setAllowGravity(true);
     this.clearTint();

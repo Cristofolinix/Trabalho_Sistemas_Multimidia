@@ -13,7 +13,7 @@ export class WinScene extends Phaser.Scene {
     const star = this.add.image(W / 2, 130, 'star_green').setScale(2.2);
     this.tweens.add({ targets: star, angle: 360, duration: 6000, repeat: -1 });
 
-    this.add.text(W / 2, 240, 'FASE 1 CONCLUIDA!', {
+    this.add.text(W / 2, 240, 'FASE 2 CONCLUIDA!', {
       fontFamily: FONT, fontSize: '28px', color: '#f1c40f'
     }).setOrigin(0.5).setStroke('#7a4f00', 5);
 
@@ -21,7 +21,7 @@ export class WinScene extends Phaser.Scene {
       fontFamily: FONT, fontSize: '12px', color: '#ecf0f1', align: 'center', lineSpacing: 8
     }).setOrigin(0.5);
 
-    this.add.text(W / 2, 360, 'FASE 2 EM DESENVOLVIMENTO', {
+    this.add.text(W / 2, 360, 'FASE 3 EM DESENVOLVIMENTO', {
       fontFamily: FONT, fontSize: '10px', color: '#7f8c8d'
     }).setOrigin(0.5);
 

@@ -33,7 +33,8 @@ export class MenuScene extends Phaser.Scene {
       const y = H / 2 + 30;
 
       const bg = this.add.rectangle(x, y, cardW, cardH, 0x16213e).setStrokeStyle(3, 0x7f8c8d);
-      const sprite = this.add.sprite(x, y - 70, `${key}_idle`, 0).play(`${key}-idle`);
+      const sprite = this.add.sprite(x + (c.menuOffsetX ?? 0), y - 70, `${key}_idle`, 0).play(`${key}-idle`);
+      sprite.setOrigin(c.originX, c.originY);
       // Cada personagem vem de um sprite pack com proporção de espaço vazio
       // diferente (ver characters.js) — normaliza pela altura REAL do desenho
       // (visibleH), não pelo frame, para ficarem do mesmo porte.

@@ -124,6 +124,39 @@ class AudioManager {
     if (this._musicTimer) { clearInterval(this._musicTimer); this._musicTimer = null; }
   }
 
+  // Música Tensa para a Fase 2: BPM lento, escala menor, baixo pesado
+  startTenseMusic() {
+    // Para qualquer música anterior (inclusive a alegre da Fase 1)
+    this.stopMusic();
+    if (!this._ensure()) return;
+    this.musicOn = true;
+    this._step = 0;
+
+    // Escala menor sombria
+    const melody = [
+      329, 0, 349, 0, 293, 0, 329, 0,
+      220, 0, 261, 0, 246, 0, 164, 0
+    ];
+    const bass = [82, 82, 0, 82, 73, 73, 0, 73]; // Muito grave, batida cardíaca
+    const stepDur = 0.35; // Mais lento (tenso)
+
+    const tick = () => {
+      if (!this.musicOn) return;
+      const i = this._step;
+      const m = melody[i % melody.length];
+      if (m) this.tone({ freq: m, dur: stepDur * 0.9, type: 'sawtooth', vol: 0.04 });
+      const b = bass[i % bass.length];
+      if (b) this.tone({ freq: b, dur: stepDur * 0.4, type: 'square', vol: 0.06 });
+      
+      // Batida pesada ocasional (como um trovão distante)
+      if (i % 8 === 0) this.tone({ freq: 50, slideTo: 20, dur: 0.8, type: 'square', vol: 0.08 });
+      
+      this._step++;
+    };
+    tick();
+    this._musicTimer = setInterval(tick, stepDur * 1000);
+  }
+
   toggleMute() {
     this.muted = !this.muted;
     if (this.master) this.master.gain.value = this.muted ? 0 : 0.6;

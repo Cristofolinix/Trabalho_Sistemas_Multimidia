@@ -320,8 +320,47 @@ Phaser não expõe o jogo no `window` por padrão. Para testar cenas via `previe
   em si — não descartar uma opção só por causa disso sem perguntar primeiro.
 
 ## Próximos passos planejados (do briefing, ainda NÃO feitos)
-- Fases 2 (dessaturada/tensa) e 3 (tempestade) com dificuldade crescente.
+- Fase 3 (tempestade) com dificuldade crescente.
 - Chefe final na Fase 3 ("TCC / Banca" com 3 avaliadores).
 - Arco de clima entre fases (paleta/fundo/som) e sequência de vitória (canudo + tempestade dissipa).
 - Mais inimigos temáticos por fase.
 - Possível troca de placeholders por tilemaps do Tiled.
+
+## ════════════════════════════════════════════════════════════════════════
+## RESOLVIDO NA SEGUNDA SESSÃO (02/07/2026) — FASE 2 ("O MEIÃO")
+## ════════════════════════════════════════════════════════════════════════
+
+### 1. Implementação da Fase 2 (Level2Scene.js)
+- Criada a cena `Level2Scene.js` e registrada no `main.js`.
+- Conectada a transição: ao passar da porta na Fase 1 (`Level1Scene.js`), o jogador é enviado para a Fase 2.
+- A Fase 2 agora envia o jogador para a `WinScene.js` quando completa, com os textos atualizados informando que a Fase 2 foi vencida e a Fase 3 está em desenvolvimento.
+
+### 2. Ambientação Visual e Tempestade
+- Substituída a ambientação da Fase 1 por um céu escuro e cinzento sem estrelas.
+- Adicionado efeito procedural de **relâmpagos/trovões** no `update()` da cena, clareando momentaneamente a tela de forma randômica.
+- O chão e as plataformas agora usam texturas de pedras escuras e frias (`stone_tile.png` e `stone_platform.png`), tirando a similaridade visual com a Fase 1.
+
+### 3. Trilha Sonora Tensa e Sombria
+- Criados métodos `startTenseMusic()` no `AudioManager.js`.
+- A trilha utiliza osciladores em um andamento lento (BPM baixo), escala menor melancólica e um baixo profundo pulsando em contratempo (como batidas de coração), com estrondos aleatórios graves que soam como trovões.
+
+### 4. Sprites Animados de Inimigos via IA (Corrigidos & Transparentes)
+- Geradas imagens de spritesheets com layout de **4 frames** usando IA.
+- Corrigidas as dimensões de fatiamento dos spritesheets na `BootScene.js` para suportar layouts variados:
+  - `enemy_sono` e `enemy_calculo`: Tira horizontal (4×1) - frames de 246x272 e 233x298.
+  - `enemy_trabalho` e `enemy_prova`: Grade (2×2) - frames de 438x379 e 412x430.
+- Ajustadas as escalas e hitboxes de colisão (`scale` de 0.16 a 0.40) no `Enemy.js` para garantir legibilidade e visualização corretas, sem cortar frames pela metade.
+
+### 5. Comportamento Inteligente e Novas Mecânicas dos Inimigos
+- **Prevenção de Quedas:** Inimigos terrestres (`trote` e `trabalho`) agora têm sensores de detecção de borda no `_patrol()` e `_updateTrabalho()`, parando ou mudando de direção na beirada das plataformas para não caírem mais em buracos sozinhos.
+- **Voo Errante do Sono:** O fantasma `sono` agora flutua em um movimento senoidal/errante 2D não-linear e persegue o jogador suavemente.
+- **Efeito do Sono Corrigido:** Ao colidir com o `sono`, o jogador sofre **lentidão profunda** (velocidade reduzida para 30% por 4s, cor azulada e texto "SONO...") em vez do enjoo verde de controles invertidos.
+- **Movimentação do Cálculo:** O inimigo `calculo` agora possui 3 padrões de movimento distintos por ID/posição: patrulha horizontal simples, oscilação senoidal vertical, e translação orbital em círculos perfeitos.
+
+### 6. Level Design e Rota Aérea Obrigatória
+- Redesenhada toda a estrutura física de plataformas e alturas para garantir que todos os saltos fossem possíveis (diferença de altura vertical máxima de 120px, respeitando a física de gravidade e pulo do jogo).
+- Criado o **Abismo Aéreo Obrigatório** na Seção 3: um enorme vazio sem chão coberto por espinhos, onde o jogador é obrigado a saltar de plataforma em plataforma flutuante, combatendo fantasmas que bloqueiam os caminhos de forma punitiva.
+
+### 7. Seletor de Fases (Dev Mode)
+- Integrada uma nova seção laranja **"[MODO DEV] TESTAR FASE"** na tela de Créditos (acessível pelo botão Créditos no menu principal).
+- Permite saltar diretamente para a **Fase 1** ou **Fase 2** com qualquer personagem escolhido de forma rápida.

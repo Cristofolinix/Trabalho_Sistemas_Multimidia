@@ -21,6 +21,27 @@ const TYPES = {
     chaseSpeed: 150,      // velocidade ao perseguir
     carrySpeed: 120,      // velocidade ao carregar o jogador
   },
+  sono: {
+    sheet: 'enemy_sono', anim: 'sono-float', speed: 50, damage: 1, hp: 1,
+    // Escala menor: ~35px de altura visual (fantasma discreto)
+    scale: 0.28, body: [80, 120], offset: [83, 76], isFloating: true,
+    appliesSlow: true
+  },
+  trabalho: {
+    // grade 2×2: frame = 438×379 → visual ~70px de altura
+    sheet: 'enemy_trabalho', anim: 'trabalho-run', speed: 75, damage: 1, hp: 2,
+    scale: 0.16, body: [340, 300], offset: [48, 50]
+  },
+  calculo: {
+    // tira 4×1: frame = 233×298 → visual ~60px de altura
+    sheet: 'enemy_calculo', anim: 'calculo-float', speed: 90, damage: 1, hp: 1,
+    scale: 0.22, body: [180, 230], offset: [26, 34], isFloating: true
+  },
+  prova: {
+    // grade 2×2: frame = 412×430 → visual ~55px de altura
+    sheet: 'enemy_prova', anim: 'prova-float', speed: 75, damage: 2, hp: 3,
+    scale: 0.18, body: [300, 330], offset: [56, 50], isFloating: true
+  },
 };
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
@@ -46,6 +67,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.homeX = x;
     this.homeY = y;
     this.speed = def.speed;
+    this.hp = def.hp ?? 1;
+
+    if (def.isFloating) {
+      this.body.setAllowGravity(false);
+    }
 
     // ── Estado do trote (máquina de estados) ─────────────────────────────
     // 'patrol' → 'chase' → 'carry' → 'return' → 'patrol'
@@ -60,7 +86,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     // Escalona o primeiro cuspe para não saírem todos juntos
     this.nextShot = (scene.time?.now ?? 0) + 800 + (x % 700);
 
-    this.play(def.anim);
+    // ── Estado do Cálculo: padrão de movimento (atribuído no construtor) ─────
+    // 0 = horizontal (só patrulha), 1 = vertical (sobe/desce), 2 = círculo
+    this.startY = y;
+    this.calcPattern = (Math.floor(x / 200)) % 3; // varia por posição no mundo
+    this._sonoWanderAngle = Math.random() * Math.PI * 2; // ângulo inicial do errante
+
+    if (def.anim) this.play(def.anim);
     this.setVelocityX(this.speed);
   }
 
@@ -72,17 +104,38 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (this.y > worldH + 80) { this._resetHome(); return; }
 
     if (this.type === 'trote') this._updateTrote();
+    else if (this.type === 'sono') this._updateSono();
+    else if (this.type === 'trabalho') this._updateTrabalho();
+    else if (this.type === 'calculo') this._updateCalculo();
+    else if (this.type === 'prova') this._updateProva();
     else                       this._updateRessaca();
   }
 
-  // ── Patrulha simples entre leftX e rightX ──────────────────────────────
-  // O sprite "olha" para a esquerda por padrão; flipX = true vira para a direita.
-  // A velocidade é REAFIRMADA todo frame (não só ao virar) — sem isso, uma
-  // colisão contra a emenda entre dois blocos de chão pode zerar a velocidade
-  // e deixar o inimigo "grudado" no lugar até a próxima vez que ele alcançasse
-  // um limite (o que podia nunca acontecer).
+  // Patrulha com detecção de borda (não cai em buracos)
   _patrol() {
-    if (this._dir === undefined) this._dir = 1;   // direção inicial: direita
+    if (this._dir === undefined) this._dir = 1;
+
+    // Detecção de borda: verifica se há chão à frente antes de avançar
+    // (só para inimigos que não flutuam)
+    if (!this.def.isFloating && this.body.blocked.down) {
+      const checkX = this.x + this._dir * (this.width * this.scaleX * 0.6);
+      const checkY = this.y + 20;
+      // Testa colisores estatic do grupo de plataformas da cena
+      const plats = this.scene.platforms?.getChildren() ?? [];
+      let groundAhead = false;
+      for (const t of plats) {
+        if (!t.active) continue;
+        const b = t.getBounds();
+        if (checkX >= b.left && checkX <= b.right && checkY >= b.top && checkY <= b.bottom + 32) {
+          groundAhead = true;
+          break;
+        }
+      }
+      if (!groundAhead) {
+        this._dir *= -1; // vira antes de cair
+        this.setFlipX(this._dir < 0);
+      }
+    }
 
     if (this.x <= this.leftX || this.body.blocked.left) {
       this._dir = 1;
@@ -267,8 +320,137 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.state = 'patrol';
   }
 
+  // ════════════════════════════════════════════════════════════════════════
+  //  INIMIGOS FASE 2
+  // ════════════════════════════════════════════════════════════════════════
+  _updateSono() {
+    // Fantasma: movimento errante 2D (não em linha reta)
+    // Usa um ângulo que vai mudando lentamente de forma senoidal
+    const t = this.scene.time.now / 1200;
+    this._sonoWanderAngle += 0.018 * Math.sin(t); // deriva o ângulo vagarosamente
+
+    const p = this.scene.player;
+    if (p && p.isAlive) {
+      const dx = p.x - this.x;
+      const dy = p.y - this.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < 350) {
+        // Persegue: inclina o ângulo em direção ao jogador, mas nunca perfeitamente
+        const targetAngle = Math.atan2(dy, dx);
+        // Interpolação lenta — o fantasma "deriva" para o jogador de forma errante
+        const diff = targetAngle - this._sonoWanderAngle;
+        this._sonoWanderAngle += Math.sign(Math.sin(diff)) * 0.06;
+      }
+    }
+
+    // Aplica velocidade no ângulo atual
+    const vx = Math.cos(this._sonoWanderAngle) * this.speed;
+    const vy = Math.sin(this._sonoWanderAngle) * this.speed * 0.6;
+    this.setVelocity(vx, vy);
+    this.setFlipX(vx < 0);
+
+    // Limites de patrulha: inverte ângulo horizontal se sair da área
+    if (this.x < this.leftX || this.x > this.rightX) {
+      this._sonoWanderAngle = Math.PI - this._sonoWanderAngle;
+    }
+    // Limites verticais: mantém o fantasma entre 80px e GROUND-30
+    const GROUND = this.scene.physics.world.bounds.height - 32;
+    if (this.y < 80)  this._sonoWanderAngle = Math.abs(this._sonoWanderAngle) % (Math.PI * 2);
+    if (this.y > GROUND - 30) this._sonoWanderAngle = -Math.abs(this._sonoWanderAngle);
+  }
+
+  _updateTrabalho() {
+    const p = this.scene.player;
+    if (p && p.isAlive && Math.abs(p.x - this.x) < 380 && Math.abs(p.y - this.y) < 120) {
+      // Modo ALERTA: persegue com detecção de borda
+      const dx = p.x - this.x;
+      const nextX = this.x + Math.sign(dx) * (this.width * this.scaleX * 0.6);
+      const nextY = this.y + 20;
+      // Verifica se há chão na direção do jogador
+      const plats = this.scene.platforms?.getChildren() ?? [];
+      let groundAhead = false;
+      for (const t of plats) {
+        if (!t.active) continue;
+        const b = t.getBounds();
+        if (nextX >= b.left && nextX <= b.right && nextY >= b.top && nextY <= b.bottom + 32) {
+          groundAhead = true; break;
+        }
+      }
+      if (groundAhead || !this.body.blocked.down) {
+        this.setVelocityX(Math.sign(dx) * 175);
+        this.setFlipX(dx < 0);
+        // Pula para alcançar plataformas acima
+        if (this.body.blocked.down && p.y < this.y - 30 && Math.random() < 0.025) {
+          this.setVelocityY(-380);
+        }
+      } else {
+        // Borda detectada: para na beirada
+        this.setVelocityX(0);
+      }
+    } else {
+      this._patrol(); // patrulha com detecção de borda já inclusa
+    }
+  }
+
+  _updateCalculo() {
+    // Padrão de movimento predefinido (atribuído no construtor por posição)
+    const t = this.scene.time.now;
+    switch (this.calcPattern) {
+      case 0: // HORIZONTAL: apenas patrulha esquerda-direita
+        this._patrol();
+        this.setVelocityY(0); // sem deriva vertical
+        break;
+
+      case 1: { // VERTICAL: sobe e desce em volta do startY
+        this._patrol();
+        const targetY = this.startY + Math.sin(t / 700) * 100;
+        this.setVelocityY((targetY - this.y) * 5);
+        break;
+      }
+
+      case 2: { // CÍRCULO: órbita em torno de (startX, startY)
+        const radius = 80;
+        const speed  = t / 1100; // rotação lenta
+        const targetX = this.homeX + Math.cos(speed) * radius;
+        const targetY = this.startY + Math.sin(speed) * radius * 0.6;
+        this.setVelocityX((targetX - this.x) * 6);
+        this.setVelocityY((targetY - this.y) * 6);
+        this.setFlipX(this.body.velocity.x < 0);
+        break;
+      }
+    }
+  }
+
+  _updateProva() {
+    // Mini-chefe: persegue tanto no X quanto no Y (flutua até o jogador)
+    const p = this.scene.player;
+    if (p && p.isAlive) {
+      const dx = p.x - this.x;
+      const dy = p.y - this.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 550) {
+        this.setVelocityX(Math.sign(dx) * this.speed);
+        this.setVelocityY(Math.sign(dy) * this.speed * 0.5);
+        this.setFlipX(dx < 0);
+      } else {
+        this._patrol();
+        this.setVelocityY(0);
+      }
+    } else {
+      this._patrol();
+      this.setVelocityY(0);
+    }
+  }
+
   kill() {
     if (!this.active) return;
+    if (this.hp > 1) {
+      this.hp--;
+      this.scene.tweens.add({ targets: this, alpha: 0.3, duration: 90, yoyo: true, repeat: 1, onComplete: () => this.alpha = 1 });
+      return;
+    }
+    
     // Se estava carregando o jogador, solta antes de morrer
     if (this.carrying) {
       this.carrying.grabbed = false;

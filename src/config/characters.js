@@ -47,7 +47,8 @@ export const CHARACTERS = {
     frameW: 32, frameH: 32,          // Agent Mike (Sprite Pack 4)
     visibleH: 15,
     body: [12, 13], bodyOffset: [14, 18.5],
-    originX: 0.594, originY: 0.75    // desenhado na metade de baixo do frame
+    originX: 0.594, originY: 0.75,   // desenhado na metade de baixo do frame
+    menuOffsetX: 14
   },
   berto: {
     key: 'berto',

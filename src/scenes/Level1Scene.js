@@ -111,7 +111,7 @@ export class Level1Scene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.door, () => {
       if (this.door.tryEnter(this.keysCollected)) {
         audio.sfx('door');
-        this.scene.start('WinScene');
+        this.scene.start('Level2Scene', { char: this.selectedChar });
       }
     });
 

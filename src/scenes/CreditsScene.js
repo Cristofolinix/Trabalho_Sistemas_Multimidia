@@ -22,7 +22,8 @@ export class CreditsScene extends Phaser.Scene {
     keys.forEach((k, i) => {
       const c = CHARACTERS[k];
       const x = startX + i * 150;
-      const sprite = this.add.sprite(x, 205, `${k}_idle`, 0).play(`${k}-idle`);
+      const sprite = this.add.sprite(x + (c.menuOffsetX ?? 0), 205, `${k}_idle`, 0).play(`${k}-idle`);
+      sprite.setOrigin(c.originX, c.originY);
       sprite.setScale(84 / c.visibleH);   // normaliza porte entre packs (altura real do desenho)
       this.add.text(x, 275, c.name.toUpperCase(), {
         fontFamily: FONT, fontSize: '12px',
@@ -46,9 +47,32 @@ export class CreditsScene extends Phaser.Scene {
       fontFamily: FONT, fontSize: '9px', color: '#5d6d7e'
     }).setOrigin(0.5);
 
-    const back = this.add.rectangle(W / 2, H - 44, 220, 44, 0x7f8c8d, 0.9)
+    // ── SELETOR DE FASE (para testes) ──────────────────────────────────────
+    this.add.text(W / 2, 556, '[ MODO DEV ] TESTAR FASE:', {
+      fontFamily: FONT, fontSize: '9px', color: '#e67e22'
+    }).setOrigin(0.5);
+
+    const defaultChar = Object.keys(CHARACTERS)[0];
+    const phases = [
+      { label: 'FASE 1', scene: 'Level1Scene' },
+      { label: 'FASE 2', scene: 'Level2Scene' },
+    ];
+    phases.forEach((ph, i) => {
+      const bx = W / 2 + (i - (phases.length - 1) / 2) * 160;
+      const btn = this.add.rectangle(bx, 588, 140, 34, 0x1a3a5c, 1)
+        .setInteractive({ useHandCursor: true })
+        .setStrokeStyle(2, 0xe67e22);
+      this.add.text(bx, 588, ph.label, {
+        fontFamily: FONT, fontSize: '12px', color: '#e67e22'
+      }).setOrigin(0.5);
+      btn.on('pointerover',  () => btn.setFillStyle(0x2a5a8c, 1));
+      btn.on('pointerout',   () => btn.setFillStyle(0x1a3a5c, 1));
+      btn.on('pointerdown',  () => this.scene.start(ph.scene, { char: defaultChar }));
+    });
+
+    const back = this.add.rectangle(W / 2, H - 30, 220, 36, 0x7f8c8d, 0.9)
       .setInteractive({ useHandCursor: true });
-    this.add.text(W / 2, H - 44, '< VOLTAR', {
+    this.add.text(W / 2, H - 30, '< VOLTAR', {
       fontFamily: FONT, fontSize: '14px', color: '#fff'
     }).setOrigin(0.5);
     back.on('pointerover', () => back.setFillStyle(0x95a5a6, 1));
