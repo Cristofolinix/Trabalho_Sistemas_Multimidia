@@ -1,6 +1,11 @@
 import { audio } from '../audio/AudioManager.js';
 
-// Jogador. Sprite animado (Pixel Adventure) + habilidade especial por personagem.
+// Altura alvo na tela (px) — cada personagem vem de um sprite pack diferente
+// (ver characters.js), com frames de tamanhos distintos; normalizamos aqui
+// para que todos apareçam do mesmo tamanho no jogo.
+const TARGET_HEIGHT = 58;
+
+// Jogador. Sprite animado (GrafxKid, CC0) + habilidade especial por personagem.
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, config) {
     super(scene, x, y, `${config.key}_idle`, 0);
@@ -10,11 +15,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    // Spritesheet 32×32 (Pixel Adventure). Escala 1.8 e hitbox no corpo.
-    this.setScale(1.8);
+    // Escala calculada a partir do frame nativo (this.frame.width/height, antes
+    // de qualquer setScale) para igualar a altura visual entre os 4 pacotes.
+    this._scale = TARGET_HEIGHT / this.frame.height;
+    this.setScale(this._scale);
     this.setCollideWorldBounds(false);
-    this.body.setSize(16, 26);
-    this.body.setOffset(8, 6);
+    this.body.setSize(this.frame.width * 0.5, this.frame.height * 0.81);
+    this.body.setOffset(this.frame.width * 0.25, this.frame.height * 0.19);
 
     this.play(`${config.key}-idle`);
     this._anim = 'idle';
@@ -232,7 +239,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       delay: 35, repeat: 5,
       callback: () => {
         const g = this.scene.add.image(this.x, this.y, this.texture.key, this.frame.name)
-          .setScale(1.8).setFlipX(this.flipX).setAlpha(0.5).setTint(0xf39c12).setDepth(this.depth - 1);
+          .setScale(this._scale).setFlipX(this.flipX).setAlpha(0.5).setTint(0xf39c12).setDepth(this.depth - 1);
         this.scene.tweens.add({ targets: g, alpha: 0, duration: 260, onComplete: () => g.destroy() });
       }
     });

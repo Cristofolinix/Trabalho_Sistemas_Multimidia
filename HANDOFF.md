@@ -53,10 +53,24 @@ public/assets/             # PNGs dos sprites (Pixel Adventure, Pixel Frog, CC0)
 ```
 
 ## Arte (sprites)
-- Personagens (os 4 jogáveis) ainda usam **Pixel Adventure** de **Pixel Frog** (licença **CC0**),
-  baixados de um espelho no GitHub (`Spellthorn/pixel_adventure`) para `public/assets/`.
-  Mapeamento atual: Hugo→Ninja Frog, Alex→Virtual Guy, Berto→Pink Man, Weverton→Mask Dude.
-  **Isso está para ser trocado — ver "ONDE PARAMOS" abaixo, é a pendência ativa.**
+- Personagens (os 4 jogáveis) usam **GrafxKid Sprite Packs** (itch.io, licença **CC0**,
+  crédito opcional). Cada um vem de um pack diferente, com tamanho de frame próprio
+  (ver `frameW`/`frameH` em `characters.js`) — `Player.js` normaliza a altura visual
+  na tela (`TARGET_HEIGHT = 58`) calculando a escala a partir de `this.frame.height`,
+  então não importa que os frames de origem tenham tamanhos diferentes.
+  Mapeamento atual:
+  - **Hugo → Mr. Man** (Sprite Pack 1, frames 16×16). Tem animação de soco dedicada,
+    combina com a habilidade dele.
+  - **Alex → Agent Mike** (Sprite Pack 4, frames 32×32). Terno escuro, segura uma
+    pistola (só estética) — combina com a habilidade de tiro.
+  - **Berto → Tommy** (Sprite Pack 3, frames 32×32). Visual casual neutro.
+  - **Weverton → Diego** (Sprite Pack 7, frames 32×48). Jaqueta verde militar,
+    segura um rifle (só estética, não usado na habilidade de dash).
+  - `player_weverton_fall.png` é uma cópia do `Jump` (Diego não tem pose de queda
+    dedicada no pack).
+  - `player_alex_jump.png`/`player_alex_fall.png` foram recortados de um único
+    arquivo `Jump_&_Falling` (2 frames) do Agent Mike.
+  - Pesquisa/decisão completa: ver "ONDE PARAMOS" abaixo (sessão de 02/07/2026).
 - Inimigos:
   - **Ressaca → ZUMBI (já trocado e commitado)**: pack "128x128 2D Zombies Spritesheet" (CC0,
     OpenGameArt), arquivo `zombie_typeA_walk_spritesheet.png` (garoto pele verde, camisa com
@@ -104,78 +118,98 @@ public/assets/             # PNGs dos sprites (Pixel Adventure, Pixel Frog, CC0)
 - Comentários didáticos no código (o usuário precisa explicar na apresentação).
 
 ## ════════════════════════════════════════════════════════════════════════
-## ONDE PARAMOS (sessão de 01/07/2026, parte 2) — LEIA PARA CONTINUAR
+## ONDE PARAMOS (sessão de 02/07/2026) — LEIA PARA CONTINUAR
 ## ════════════════════════════════════════════════════════════════════════
-Esta sessão retomou de um HANDOFF anterior (que já tinha a IA dos inimigos pronta,
-ver seção "IA dos inimigos" abaixo). Nesta parte da sessão:
 
-### Já FEITO e commitado/pushado (commit `feat: sprite da Ressaca trocado por zumbi CC0`)
-- **Ressaca agora É o zumbi de verdade** (ver seção "Arte" acima para detalhes técnicos).
-  Testado com `npx vite build` sem erros. Falta só o usuário rodar `npm run dev` e conferir
-  visualmente o tamanho/hitbox em jogo (ninguém rodou o dev server ainda nesta parte).
+### RESOLVIDO nesta sessão: sprites dos 4 jogadores trocados para humanos de verdade
+A pendência do HANDOFF anterior ("sprites dos 4 jogadores") foi fechada. Ver seção
+"Arte (sprites)" acima para o mapeamento final (GrafxKid Sprite Packs, CC0) e o porquê
+de cada escolha. Testado no dev server: seleção de personagem, corrida, pulo e colisão
+com o chão conferidos visualmente para os 4 (ver "Dica de teste" abaixo para repetir).
+`npx vite build` sem erros.
 
-### PENDENTE — decisão em aberto: sprites dos 4 JOGADORES (humanos)
-Contexto da investigação feita nesta sessão: **NÃO existe pack CC0 pronto** (tira horizontal
-lateral, idle/walk/jump, 4+ variantes distintas) equivalente ao do zumbi. O que existe:
-- Packs modulares (peças soltas: cabeça/corpo/braços, ou arquivos `.xcf` do GIMP) — dá muito
-  mais trabalho para montar e é frágil de automatizar bem.
-- Packs top-down (perspectiva de cima) — não servem para plataforma lateral.
-- Packs de 1 personagem só — deixaria os 4 iguais, só variando cor.
+**Erros cometidos e corrigidos ao longo da sessão** (útil para não repetir):
+- Tentei primeiro o pack "MV Platformer" (MoikMellah, OpenGameArt) — o usuário rejeitou:
+  Berto/Weverton saíram com sprites **femininos** (o pack só tinha personagens fantasy
+  prontos, tipo "warrior"/"mage"/"knight", e usei bases femininas para 2 deles sem
+  perceber) e o estilo (proporções realistas, tipo RPG) destoava do "baixinho/cartunesco"
+  que o usuário queria manter (o Pixel Adventure antigo já tinha esse estilo e ele gostava).
+  **Licença dos personagens deve ser sempre MASCULINA aqui** (representam 4 amigos reais)
+  e o estilo deve ser baixinho/cartunesco tipo Pixel Adventure, não realista.
+  → Revertido com `git checkout` (nada tinha sido commitado ainda).
+- Segunda tentativa (GrafxKid) quase descartei Agent Mike/Diego por segurarem arma
+  (pistola/rifle) em todo frame — o usuário corrigiu que isso não é problema real
+  (é só pixel art bem simples, sem peso nenhum). Não vale a pena ficar excessivamente
+  cauteloso com esse tipo de prop cosmético em jogos assim.
+- **Onion Lad, Barry Cherry, Big Red, o "Rei" de Kings and Pigs**: todos pareciam humanos
+  pela descrição textual da página do itch.io, mas na verdade são vegetal/fruta/monstro
+  redondo/goblin verde. **Sempre conferir a imagem de capa pública antes de baixar o pack
+  inteiro** (ver "Dica de fluxo" abaixo — evita ciclos de baixar→abrir→descartar).
 
-O usuário JÁ ESCOLHEU a direção: **"Integrar humanos (estilo vai destoar)"** — aceitou que o
-estilo cartoon/vetorial pode destoar do pixel art do resto do jogo, em troca de melhor
-semelhança com os traços reais dos 4 colegas. Três caminhos foram propostos ao usuário para
-essa integração (ele ainda NÃO escolheu qual):
-1. **Usuário manda um link** de um pack/personagem que ele goste (itch.io/OpenGameArt),
-   de preferência com tira lateral (idle/walk/jump) — melhor resultado, mas depende dele.
-2. **Kenney "Toon Characters" (CC0)** — humanos cartoon com variações (óculos, chapéu, etc.),
-   dá pra aproximar. Não é pixel. Claude pesquisa e integra sozinho.
-3. **Recolorir no estilo do zumbi** — gerar 4 "estudantes" reaproveitando o traço do kit do
-   zumbi (pele humana, camisas nas cores de cada um). Fica coeso com o inimigo, mas pouca
-   variação de rosto/traços.
-- **Minha recomendação dada ao usuário: opção 1** (ele manda o link) — garante o melhor
-  resultado real. Se ele preferir eu decidir sozinho, ir de **opção 2 (Kenney)**.
+### Pendência ativa: nenhuma tarefa de arte em aberto no momento
+Próximo passo é escolha livre do usuário — ver "Próximos passos planejados" abaixo
+(Fases 2/3, tilemaps Tiled, etc.) ou aguardar novo pedido.
 
-**Descrições físicas que o usuário deu para aproximar cada personagem** (para quando os
-sprites forem escolhidos/integrados):
-- **Hugo**: de shorts.
-- **Alex**: calça e jaqueta pretas.
-- **Berto**: calça jeans e óculos.
-- **Weverton**: topete e camisa verde.
-(O usuário aceitou que as roupas podem não bater exatamente com a arte disponível.)
+### Dica de teste (dev) — IMPORTANTE, usar exatamente este fluxo
+Phaser não expõe o jogo no `window` por padrão. Para testar cenas via `preview_eval`/console:
+1. Adicionar temporariamente em `main.js`, substituindo `new Phaser.Game(config);`:
+   ```js
+   const __game = new Phaser.Game(config);
+   if (import.meta.env.DEV) window.__game = __game;
+   ```
+2. `window.__game.scene.start('MenuScene')` ou `window.__game.scene.start('Level1Scene', { char: 'hugo' })`.
+3. Para inspecionar/mover o player: `window.__game.scene.getScene('Level1Scene').player`.
+4. **REMOVER antes de commitar** (o handoff anterior já avisava disso, reforçando).
+- Ao usar a ferramenta de preview (`preview_start`), o `serverId`/porta retornados pelo
+  MCP às vezes NÃO batem com a porta real que o Vite escolheu (`vite.config.js` tem
+  `server.port: 3000` fixo; se a 3000 estiver ocupada o Vite sobe sozinho na 3001, mas
+  a ferramenta de preview pode continuar apontando pra outra porta livre que ela mesma
+  reservou). Se `preview_screenshot` mostrar tela preta / `chrome-error://`, checar a
+  porta real nos logs do servidor (`preview_logs`) e navegar manualmente com
+  `preview_eval`: `window.location.href = "http://localhost:<porta real>"`.
+- Cliques via `preview_click`/coordenadas em cima do `<canvas>` do Phaser são pouco
+  confiáveis (o clique cai em coordenada errada e não acerta os botões da UI). Mais
+  rápido pular direto pra cena com `window.__game.scene.start(...)` do que tentar clicar.
 
-**Quando for integrar**: precisa de idle/run/jump/fall por personagem (ver `STATES` em
-`BootScene.js`). Hoje usam Pixel Adventure 32×32; ao trocar, ajustar `BootScene.js`
-(load + `_makeAnimations`), `Player.js` (scale/hitbox em torno da linha do `setScale`/
-`body.setSize`/`body.setOffset` no construtor) e `characters.js` se os nomes de arquivo
-mudarem. Mapeamento de cor atual em `characters.js`: Hugo=vermelho, Alex=azul, Berto=verde,
-Weverton=laranja — pode reaproveitar essas cores nas camisas dos novos sprites se fizer sentido.
-
-**PRIMEIRA COISA A FAZER na nova sessão**: perguntar ao usuário qual das 3 opções acima ele
-escolhe (ou se ele já tem um link para mandar). Não escolher por ele.
-
-### Dica de teste (dev)
-Phaser não expõe o jogo no `window`. Para testar cenas via console/eval, adicione
-temporariamente em `main.js`: `if (import.meta.env.DEV) window.__game = <a instância>;`
-e depois `window.__game.scene.start('Level1Scene', { char: 'hugo' })`. REMOVER antes de commitar.
-
-### Dica de fluxo para baixar/integrar sprites CC0 (o que funcionou)
-1. `WebSearch`/`WebFetch` para achar a página do asset (OpenGameArt é mais confiável que
-   itch.io para link direto de arquivo).
-2. Baixar o PNG com `Invoke-WebRequest -Uri <url> -OutFile <destino> -UseBasicParsing`.
-3. Usar `Read` na imagem baixada para ver visualmente o spritesheet antes de fatiar.
-4. Medir dimensões reais: PowerShell com `[System.Drawing.Image]::FromFile(...)` →
-   `$img.Width/$img.Height`, dividir pelo número de frames visíveis.
-5. Ajustar `frameWidth/frameHeight` no `load.spritesheet` da `BootScene.js`, `frameRate` na
-   animação, e `scale/body/offset` no arquivo da entidade correspondente (`Enemy.js`/`Player.js`).
-6. Rodar `npx vite build` para checar que não há erro antes de pedir para o usuário testar
-   visualmente com `npm run dev` (build não pega problemas de proporção/hitbox, só de sintaxe).
+### Dica de fluxo para baixar/integrar sprites CC0 (atualizado nesta sessão)
+1. `WebSearch`/`WebFetch` para achar a página do asset. **OpenGameArt** é fácil (link
+   direto de zip). **itch.io bloqueia download automatizado** (Cloudflare bot-protection
+   — o fluxo de CSRF token + `/download_url` retorna uma URL assinada, mas o `curl` final
+   sempre recebe 302 de volta pra página do jogo; só funciona com navegador de verdade).
+   Nesses casos, **pedir pro usuário baixar manualmente** e salvar em `C:\Users\alexc\Downloads`
+   — de lá dá pra ler puro Bash/PowerShell normalmente.
+2. **Antes de pedir pro usuário baixar o pacote inteiro**, confira a capa/preview pública
+   do itch.io (`img.itch.zone/...`, sempre acessível sem auth — pegar a URL com
+   `curl -s <página> | grep -oE 'https://img\.itch\.zone/[^"]*original[^"]*'`) pra checar
+   visualmente se o personagem é humano mesmo (nomes/descrições enganam — ver erros acima).
+3. Baixar o PNG/zip com `Invoke-WebRequest -Uri <url> -OutFile <destino> -UseBasicParsing`
+   (funciona bem pra OpenGameArt/Kenney; não funciona pra itch.io, ver item 1).
+4. Usar `Read` na imagem baixada pra ver visualmente o spritesheet antes de fatiar.
+5. Medir dimensões reais: PowerShell com `[System.Drawing.Bitmap]::FromFile(...)` →
+   `$img.Width/$img.Height`. Ao montar `Rectangle` pra recorte, usar sempre
+   `[System.Drawing.Rectangle]::new(x,y,w,h)` (sintaxe `New-Object ...Rectangle(a,b,c,d)`
+   é ambígua no PowerShell e falha silenciosamente/gera imagem em branco sem erro óbvio).
+6. Ajustar `frameWidth/frameHeight` no `load.spritesheet` da `BootScene.js` — hoje isso é
+   por personagem via `CHARACTERS[c].frameW/frameH` em `characters.js` (packs diferentes
+   têm frames de tamanhos diferentes). `Player.js` normaliza a escala sozinho a partir de
+   `this.frame.height` (constante `TARGET_HEIGHT`), então não precisa mexer na escala à mão.
+7. Rodar `npx vite build` pra checar que não há erro, DEPOIS testar visualmente com
+   `preview_start`/`npm run dev` (build não pega problema de proporção/hitbox, só sintaxe).
 
 ## Preferências do usuário reforçadas nesta sessão
 - Continua valendo: commit/push no `master` a cada bloco; textos abstraem o briefing;
   luzes = canhões de luz; fase sempre possível; comentários didáticos no código.
-- **Avisar sobre decisões que dependem do usuário em vez de assumir — inclusive perguntar
-  antes de escolher entre alternativas de arte/estilo, não só entre alternativas técnicas.**
+- Avisar sobre decisões que dependem do usuário em vez de assumir — inclusive perguntar
+  antes de escolher entre alternativas de arte/estilo, não só entre alternativas técnicas.
+- **Personagens jogáveis devem ser sempre masculinos** (representam 4 amigos reais do
+  usuário) — nunca usar base feminina de um pack "genérico", mesmo como solução temporária.
+- **Estilo visual dos jogadores = baixinho/cartunesco** (tipo Pixel Adventure/GrafxKid),
+  não realista/proporção RPG — mesmo que o traço "destoe" do resto do pixel art do jogo.
+- Não precisa bater exatamente com as descrições físicas dadas (shorts, óculos, jeans,
+  topete, camisa verde) — usar o que houver disponível "vagamente" no mesmo estilo já
+  é aceitável, o usuário prioriza estilo consistente sobre fidelidade literal.
+- Props cosméticos (arma, espada) na pose idle/andando de um sprite não são um problema
+  em si — não descartar uma opção só por causa disso sem perguntar primeiro.
 
 ## Próximos passos planejados (do briefing, ainda NÃO feitos)
 - Fases 2 (dessaturada/tensa) e 3 (tempestade) com dificuldade crescente.

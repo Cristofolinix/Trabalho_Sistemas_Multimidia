@@ -22,7 +22,8 @@ export class CreditsScene extends Phaser.Scene {
     keys.forEach((k, i) => {
       const c = CHARACTERS[k];
       const x = startX + i * 150;
-      this.add.sprite(x, 205, `${k}_idle`, 0).setScale(2.6).play(`${k}-idle`);
+      const sprite = this.add.sprite(x, 205, `${k}_idle`, 0).play(`${k}-idle`);
+      sprite.setScale(84 / sprite.frame.height);   // normaliza porte entre packs
       this.add.text(x, 275, c.name.toUpperCase(), {
         fontFamily: FONT, fontSize: '12px',
         color: '#' + c.color.toString(16).padStart(6, '0')
@@ -38,7 +39,10 @@ export class CreditsScene extends Phaser.Scene {
       fontFamily: FONT, fontSize: '11px', color: '#5d6d7e'
     }).setOrigin(0.5);
 
-    this.add.text(W / 2, 490, 'ARTE: PIXEL ADVENTURE - PIXEL FROG (CC0)', {
+    this.add.text(W / 2, 490, 'PERSONAGENS: GRAFXKID SPRITE PACKS (CC0, ITCH.IO)', {
+      fontFamily: FONT, fontSize: '9px', color: '#5d6d7e'
+    }).setOrigin(0.5);
+    this.add.text(W / 2, 510, 'INIMIGOS: 2D ZOMBIES SPRITESHEET (CC0, OPENGAMEART)', {
       fontFamily: FONT, fontSize: '9px', color: '#5d6d7e'
     }).setOrigin(0.5);
 

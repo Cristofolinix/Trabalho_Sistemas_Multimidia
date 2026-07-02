@@ -8,7 +8,8 @@ export const CHARACTERS = {
     ability: 'Soco corpo a corpo',
     speed: 210,
     jumpVelocity: -560,
-    abilityCooldown: 1200
+    abilityCooldown: 1200,
+    frameW: 16, frameH: 16   // Mr. Man (GrafxKid Sprite Pack 1, CC0)
   },
   alex: {
     key: 'alex',
@@ -17,7 +18,8 @@ export const CHARACTERS = {
     ability: 'Projetil a distancia',
     speed: 200,
     jumpVelocity: -560,
-    abilityCooldown: 1800
+    abilityCooldown: 1800,
+    frameW: 32, frameH: 32   // Agent Mike (GrafxKid Sprite Pack 4, CC0)
   },
   berto: {
     key: 'berto',
@@ -26,7 +28,8 @@ export const CHARACTERS = {
     ability: 'Onda de area',
     speed: 195,
     jumpVelocity: -555,
-    abilityCooldown: 2600
+    abilityCooldown: 2600,
+    frameW: 32, frameH: 32   // Tommy (GrafxKid Sprite Pack 3, CC0)
   },
   weverton: {
     key: 'weverton',
@@ -35,7 +38,8 @@ export const CHARACTERS = {
     ability: 'Dash veloz',
     speed: 225,
     jumpVelocity: -575,
-    abilityCooldown: 900
+    abilityCooldown: 900,
+    frameW: 32, frameH: 48   // Diego (GrafxKid Sprite Pack 7, CC0)
   }
 };
 

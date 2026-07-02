@@ -7,11 +7,13 @@ export class BootScene extends Phaser.Scene {
   constructor() { super({ key: 'BootScene' }); }
 
   preload() {
-    // ── Spritesheets externos (Pixel Adventure — Pixel Frog, CC0) ──────────
-    Object.keys(CHARACTERS).forEach(c => {
+    // ── Spritesheets externos (GrafxKid Sprite Packs, CC0) ──────────────────
+    // Cada personagem vem de um sprite pack diferente, com seu próprio tamanho
+    // de frame (ver characters.js) — o hitbox/escala se ajusta sozinho em Player.js.
+    Object.entries(CHARACTERS).forEach(([c, cfg]) => {
       STATES.forEach(st =>
         this.load.spritesheet(`${c}_${st}`, `assets/player_${c}_${st}.png`,
-          { frameWidth: 32, frameHeight: 32 }));
+          { frameWidth: cfg.frameW, frameHeight: cfg.frameH }));
     });
     this.load.spritesheet('ressaca_walk', 'assets/enemy_ressaca_walk.png',
       { frameWidth: 71, frameHeight: 138 });   // zumbi CC0: 4 frames de 71x138

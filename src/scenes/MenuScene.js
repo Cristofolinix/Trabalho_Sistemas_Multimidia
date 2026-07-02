@@ -33,7 +33,11 @@ export class MenuScene extends Phaser.Scene {
       const y = H / 2 + 30;
 
       const bg = this.add.rectangle(x, y, cardW, cardH, 0x16213e).setStrokeStyle(3, 0x7f8c8d);
-      const sprite = this.add.sprite(x, y - 70, `${key}_idle`, 0).setScale(2.6).play(`${key}-idle`);
+      const sprite = this.add.sprite(x, y - 70, `${key}_idle`, 0).play(`${key}-idle`);
+      // Cada personagem vem de um sprite pack com frame nativo diferente
+      // (ver characters.js) — normaliza pela altura para ficarem do mesmo porte.
+      const baseScale = 84 / sprite.frame.height;
+      sprite.setScale(baseScale);
       const nome = this.add.text(x, y + 30, c.name.toUpperCase(), {
         fontFamily: FONT, fontSize: '18px', color: '#ffffff'
       }).setOrigin(0.5);
@@ -45,7 +49,7 @@ export class MenuScene extends Phaser.Scene {
         fontFamily: FONT, fontSize: '11px', color: '#2ecc71'
       }).setOrigin(0.5);
 
-      return { bg, sprite, nome, hab, tecla, x, y, cardH };
+      return { bg, sprite, nome, hab, tecla, x, y, cardH, baseScale };
     });
 
     this.arrow = this.add.text(0, 0, 'v', {
@@ -81,7 +85,7 @@ export class MenuScene extends Phaser.Scene {
       const a = sel ? 1 : 0.45;
       card.sprite.setAlpha(a); card.nome.setAlpha(a);
       card.hab.setAlpha(a); card.tecla.setAlpha(a);
-      card.sprite.setScale(sel ? 3.1 : 2.6);
+      card.sprite.setScale(sel ? card.baseScale * 1.192 : card.baseScale);
     });
     const c = this.cards[this.selectedIndex];
     this.arrow.setPosition(c.x, c.y - c.cardH / 2 - 18);
