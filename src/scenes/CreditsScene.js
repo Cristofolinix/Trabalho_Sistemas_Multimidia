@@ -23,7 +23,7 @@ export class CreditsScene extends Phaser.Scene {
       const c = CHARACTERS[k];
       const x = startX + i * 150;
       const sprite = this.add.sprite(x, 205, `${k}_idle`, 0).play(`${k}-idle`);
-      sprite.setScale(84 / sprite.frame.height);   // normaliza porte entre packs
+      sprite.setScale(84 / c.visibleH);   // normaliza porte entre packs (altura real do desenho)
       this.add.text(x, 275, c.name.toUpperCase(), {
         fontFamily: FONT, fontSize: '12px',
         color: '#' + c.color.toString(16).padStart(6, '0')

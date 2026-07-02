@@ -1,9 +1,10 @@
 import { audio } from '../audio/AudioManager.js';
 
 // Altura alvo na tela (px) — cada personagem vem de um sprite pack diferente
-// (ver characters.js), com frames de tamanhos distintos; normalizamos aqui
-// para que todos apareçam do mesmo tamanho no jogo.
-const TARGET_HEIGHT = 58;
+// (ver characters.js), com frames e "espaço vazio" de tamanhos distintos;
+// normalizamos pela altura REAL do desenho (config.visibleH), não pela altura
+// do frame, para que os 4 apareçam do mesmo tamanho no jogo.
+const TARGET_HEIGHT = 56;
 
 // Jogador. Sprite animado (GrafxKid, CC0) + habilidade especial por personagem.
 export class Player extends Phaser.Physics.Arcade.Sprite {
@@ -15,13 +16,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    // Escala calculada a partir do frame nativo (this.frame.width/height, antes
-    // de qualquer setScale) para igualar a altura visual entre os 4 pacotes.
-    this._scale = TARGET_HEIGHT / this.frame.height;
+    // Escala calculada a partir da altura REAL do desenho (config.visibleH),
+    // não do frame — cada pack tem uma proporção de espaço vazio diferente.
+    // Hitbox em px nativos, também medida por personagem (ver characters.js).
+    this._scale = TARGET_HEIGHT / config.visibleH;
     this.setScale(this._scale);
     this.setCollideWorldBounds(false);
-    this.body.setSize(this.frame.width * 0.5, this.frame.height * 0.81);
-    this.body.setOffset(this.frame.width * 0.25, this.frame.height * 0.19);
+    this.body.setSize(config.body[0], config.body[1]);
+    this.body.setOffset(config.bodyOffset[0], config.bodyOffset[1]);
 
     this.play(`${config.key}-idle`);
     this._anim = 'idle';

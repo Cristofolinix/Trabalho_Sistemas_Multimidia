@@ -34,9 +34,10 @@ export class MenuScene extends Phaser.Scene {
 
       const bg = this.add.rectangle(x, y, cardW, cardH, 0x16213e).setStrokeStyle(3, 0x7f8c8d);
       const sprite = this.add.sprite(x, y - 70, `${key}_idle`, 0).play(`${key}-idle`);
-      // Cada personagem vem de um sprite pack com frame nativo diferente
-      // (ver characters.js) — normaliza pela altura para ficarem do mesmo porte.
-      const baseScale = 84 / sprite.frame.height;
+      // Cada personagem vem de um sprite pack com proporção de espaço vazio
+      // diferente (ver characters.js) — normaliza pela altura REAL do desenho
+      // (visibleH), não pelo frame, para ficarem do mesmo porte.
+      const baseScale = 84 / c.visibleH;
       sprite.setScale(baseScale);
       const nome = this.add.text(x, y + 30, c.name.toUpperCase(), {
         fontFamily: FONT, fontSize: '18px', color: '#ffffff'
