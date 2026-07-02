@@ -10,6 +10,12 @@
 // pose de idle) — é isso que Player.js usa para igualar o tamanho visual dos 4.
 // 'body'/'bodyOffset' são a hitbox em px nativos (mesmo padrão do TYPES em
 // Enemy.js), medidos a partir do recorte visível de cada sprite.
+// 'originX'/'originY' recentram o ponto de referência do sprite (this.x/this.y)
+// no CENTRO VISUAL do desenho em vez do centro do frame (que é o padrão do
+// Phaser, 0.5/0.5) — sem isso, personagens com desenho descentralizado no
+// canvas (ex: Agent Mike, desenhado na metade de baixo do frame 32x32) fazem
+// habilidades que usam this.y (mira do tiro, área do soco) saírem deslocadas
+// da posição real do personagem na tela.
 export const CHARACTERS = {
   hugo: {
     key: 'hugo',
@@ -21,7 +27,8 @@ export const CHARACTERS = {
     abilityCooldown: 1200,
     frameW: 16, frameH: 16,          // Mr. Man (Sprite Pack 1)
     visibleH: 15,
-    body: [7, 13], bodyOffset: [5, 3]
+    body: [7, 13], bodyOffset: [5, 3],
+    originX: 0.469, originY: 0.5
   },
   alex: {
     key: 'alex',
@@ -33,7 +40,8 @@ export const CHARACTERS = {
     abilityCooldown: 1800,
     frameW: 32, frameH: 32,          // Agent Mike (Sprite Pack 4)
     visibleH: 15,
-    body: [12, 13], bodyOffset: [14, 19]
+    body: [12, 13], bodyOffset: [14, 12],
+    originX: 0.594, originY: 0.75    // desenhado na metade de baixo do frame
   },
   berto: {
     key: 'berto',
@@ -45,7 +53,8 @@ export const CHARACTERS = {
     abilityCooldown: 2600,
     frameW: 32, frameH: 32,          // Tommy (Sprite Pack 3)
     visibleH: 28,
-    body: [12, 24], bodyOffset: [11, 8]
+    body: [12, 24], bodyOffset: [11, 8],
+    originX: 0.5, originY: 0.547
   },
   weverton: {
     key: 'weverton',
@@ -57,7 +66,8 @@ export const CHARACTERS = {
     abilityCooldown: 900,
     frameW: 32, frameH: 48,          // Diego (Sprite Pack 7)
     visibleH: 39,
-    body: [20, 33], bodyOffset: [6, 15]
+    body: [20, 33], bodyOffset: [6, 15],
+    originX: 0.484, originY: 0.583
   }
 };
 

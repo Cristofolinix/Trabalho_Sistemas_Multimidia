@@ -16,6 +16,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
+    // Recentra this.x/this.y no centro visual do desenho (ver characters.js) —
+    // sem isso, habilidades que miram a partir de this.y (tiro do Alex, soco do
+    // Hugo) saem deslocadas em personagens cujo desenho não é centralizado no
+    // frame (ex: Agent Mike, desenhado na metade de baixo do canvas 32x32).
+    this.setOrigin(config.originX, config.originY);
+
     // Escala calculada a partir da altura REAL do desenho (config.visibleH),
     // não do frame — cada pack tem uma proporção de espaço vazio diferente.
     // Hitbox em px nativos, também medida por personagem (ver characters.js).
@@ -241,6 +247,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       delay: 35, repeat: 5,
       callback: () => {
         const g = this.scene.add.image(this.x, this.y, this.texture.key, this.frame.name)
+          .setOrigin(this.originX, this.originY)
           .setScale(this._scale).setFlipX(this.flipX).setAlpha(0.5).setTint(0xf39c12).setDepth(this.depth - 1);
         this.scene.tweens.add({ targets: g, alpha: 0, duration: 260, onComplete: () => g.destroy() });
       }
