@@ -212,12 +212,19 @@ export class Level2Scene extends Phaser.Scene {
     // ════════════════════════════════════════════════════════════════════════
 
     // ── Chão (só onde existe caminho por baixo) ──────────────────────────
+    // Nota sobre alinhamento: _addFloor/_addPlatform preenchem tiles de 32px
+    // A PARTIR do próprio xStart — se o vão entre dois trechos "encostados"
+    // não for múltiplo de 32 relativo ao xStart de cada um, o último tile de
+    // um trecho pode ultrapassar a fronteira e sobrepor o primeiro tile do
+    // próximo (foi o que causava a plataforma duplicada visível perto da
+    // Seção 4/5). Por isso o buraco antes da arena abre exatamente num tile
+    // alinhado (4891) e o chão da Arena+Corredor final foi unificado numa
+    // única chamada (sem fronteira interna pra desalinhar).
     this._addFloor(0, 1100);           // Seção 1
     // Seção 2: sem chão (plataformas) — mas coloca spikes embaixo
     // Seção 3: ABISMO — nenhum chão, forçando rota aérea
-    this._addFloor(3739, 4939);        // Seção 4
-    this._addFloor(4939, 5939);        // Arena da Prova
-    this._addFloor(5939, WORLD_W);     // Corredor final
+    this._addFloor(3739, 4891);        // Seção 4 (para antes do buraco da arena)
+    this._addFloor(4955, WORLD_W);     // Arena da Prova + Corredor final (uma só faixa contínua)
 
     // ── Spikes no grande abismo (Seções 2 e 3) ──────────────────────────
     // Seção 2: chão de spikes abaixo das plataformas flutuantes
@@ -225,8 +232,8 @@ export class Level2Scene extends Phaser.Scene {
     // Seção 3: o grande abismo aéreo — spikes de parede a parede
     this._addSpikes(2200, 3739, 688);
 
-    // Spikes adicionais nos buracos normais das Seções 4 e 5
-    this._addSpikes(4889, 4939, 688);  // pequeno buraco antes da arena
+    // Buraco com spike antes da arena (pedra de passagem no meio, ver Seção 4 abaixo)
+    this._addSpikes(4891, 4955, 688);
     this.traps = [
       { x1: 1100, x2: 2200 },
       { x1: 2200, x2: 3739 },
@@ -261,7 +268,10 @@ export class Level2Scene extends Phaser.Scene {
     this._addPlatform(1540, 460, 3);   // +100 sobe
     this._addPlatform(1700, 560, 3);   // -100 desce
     this._addPlatform(1870, 460, 3);   // +100 sobe
-    this._addPlatform(2040, 500, 5);   // plataforma de chegada (larga)
+    this._addPlatform(2040, 500, 4);   // plataforma de chegada (largura reduzida
+                                        // de 5 pra 4 tiles — 5 tiles ia até x=2200,
+                                        // sobrepondo a plataforma inicial da Seção 3
+                                        // em x=2180-2200/y=480-512)
 
     // Cálculo em cada plataforma
     this._addEnemy(1250, 440, 1200, 1460, 'calculo');   // patrulha horiz
@@ -312,12 +322,12 @@ export class Level2Scene extends Phaser.Scene {
     this._addEnemy(3306, 380, 3226, 3480, 'calculo'); // entre 4ª e 5ª
 
     // ════════════════════════════════════════════════════════════════════════
-    //  SEÇÃO 4 [3739 - 4939]: EMBOSCADA DO SONO — volta ao chão
+    //  SEÇÃO 4 [3739 - 4955]: EMBOSCADA DO SONO — volta ao chão
     // ════════════════════════════════════════════════════════════════════════
     this._addPlatform(3739, 400, 6);   // plataforma de aterrissagem do abismo
 
-    // Buraco com spike antes da arena
-    this._addPlatform(4879, GROUND, 1); // pedra de passagem
+    // Pedra de passagem no meio do buraco de espinhos (4891-4955, ver spikes acima)
+    this._addPlatform(4907, GROUND, 1);
 
     // Sono patrulha o chão (posicionado 80px acima do chão para flutuar bem)
     this._addEnemy(3939, GROUND - 80, 3789, 4289, 'sono');
@@ -330,7 +340,7 @@ export class Level2Scene extends Phaser.Scene {
     this._addEnemy(4049, 390, 3989, 4289, 'calculo');  // padrão vertical
 
     // ════════════════════════════════════════════════════════════════════════
-    //  SEÇÃO 5 [4939 - 5939]: ARENA DA PROVA (mini-chefe)
+    //  SEÇÃO 5 [4955 - 5939]: ARENA DA PROVA (mini-chefe)
     // ════════════════════════════════════════════════════════════════════════
     this._addPlatform(5089, 440, 6);   // plataforma de ataque elevada
     this._addPlatform(5389, 360, 4);   // plataforma alta (vão 108px + subida 80 — testado OK nas 2 velocidades extremas)

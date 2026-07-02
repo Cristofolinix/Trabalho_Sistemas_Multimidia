@@ -443,6 +443,31 @@ porta. Os vãos de DESCIDA continuam ~80px (não têm esse problema — descendo
 não precisa pular, só andar pra fora da borda; testado sem problema nas duas
 velocidades extremas).
 
+### 6. Plataformas se sobrepondo visualmente (usuário mandou print)
+Achei 3 sobreposições reais checando programaticamente os bounds de TODOS os
+tiles de `platforms` (par a par, com `getBounds()` — muito mais confiável que
+tentar adivinhar pela imagem). Causas:
+- **Seção 2→3**: a plataforma de chegada da Seção 2 (`2040,500,5 tiles` →
+  até x=2200) sobrepunha a plataforma inicial da Seção 3 (`2180,480,6 tiles`
+  → começa em x=2180) em 20px. Corrigido reduzindo a de chegada pra 4 tiles.
+- **Buraco antes da arena (Seção 4/5)**: o "buraco com espinho" nunca foi
+  um buraco de verdade — o `_addFloor` da Seção 4 cobria a faixa INTEIRA
+  (incluindo onde os spikes/pedra de passagem deviam estar), então a
+  "pedra de passagem" ficava simplesmente em cima do chão sólido, duplicado.
+  Corrigido cortando o chão antes do buraco de verdade (ver nota grande no
+  código sobre alinhamento de tiles) e recentralizando a pedra dentro dele.
+- **Arena→Corredor final**: mesmo tipo de bug — dois `_addFloor` "encostados"
+  sem gap intencional, mas com span não múltiplo de 32 relativo a cada início,
+  então o último tile de um vazava sobre o primeiro do outro. Corrigido
+  **unificando os dois num só** `_addFloor` (não tem motivo real pra serem
+  chamadas separadas já que é uma faixa contínua de chão).
+- **Regra geral pra não reintroduzir isso**: `_addFloor(a,b)` só garante que
+  os tiles não passam de `b` se `(b-a)` for múltiplo de 32. Se dois trechos
+  "encostados" (sem buraco entre eles) tiverem `(b-a)` não-múltiplo de 32,
+  UM DELES vai vazar sobre o outro. Ou garanta o múltiplo de 32, ou (mais
+  simples) só use uma chamada única quando não há buraco intencional entre
+  os trechos.
+
 ### Dica de teste CRÍTICA: simular física de pulo sem precisar jogar de verdade
 ```js
 // precisa do hack window.__game em main.js (ver "Dica de teste" acima)
