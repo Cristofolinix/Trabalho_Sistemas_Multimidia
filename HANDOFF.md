@@ -468,6 +468,27 @@ tentar adivinhar pela imagem). Causas:
   simples) só use uma chamada única quando não há buraco intencional entre
   os trechos.
 
+### 7. Fantasma (sono) ainda "afundava" visualmente na plataforma que guarda
+Depois do fix do item 2 (limite vertical relativo a `homeY`), o usuário
+mandou print mostrando os fantasmas da Seção 3 com a cauda entrando na
+plataforma mesmo parados. Causa: o **desenho** do sono é bem maior que a
+**hitbox** física dele — metade da altura do frame sozinha já é ~38px
+(272px de frame × escala 0.28 ÷ 2), e a folga entre o posto do fantasma
+(`homeY`) e a plataforma que ele guarda é só 60px (Seção 3) ou 80px (os que
+ficam sobre o chão). Isso significa que **mesmo com a hitbox nunca saindo do
+lugar**, o alcance de vagar (`vRange`, ver item 2) tinha que ser bem menor
+que a folga pra sobrar espaço pro desenho inteiro do fantasma — um alcance
+de 90 (e depois 35) ainda deixava a cauda entrar 14-30px na plataforma.
+Corrigido para `vRange = 20` (parado). Validado medindo
+`sprite.getBounds()` (bounds do DESENHO inteiro, não só da hitbox) contra a
+superfície mais próxima abaixo de cada um dos 6 sonos do nível, ao longo de
+15s simulados — sobreposição zero em todos.
+**Lição**: ao ajustar alcance/posição de qualquer inimigo com sprite bem
+maior que a hitbox (a maioria dos da Fase 2), sempre medir contra
+`sprite.getBounds()` (desenho completo), não contra `body.bottom`/`this.y`
+— são números bem diferentes quando o pack de arte tem bastante "espaço
+vazio"/cauda/efeito ao redor do corpo real.
+
 ### Dica de teste CRÍTICA: simular física de pulo sem precisar jogar de verdade
 ```js
 // precisa do hack window.__game em main.js (ver "Dica de teste" acima)

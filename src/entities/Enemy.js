@@ -382,7 +382,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     // parecendo ter "caído" mesmo estando voando/sem gravidade. Enquanto
     // perseguindo, o alcance é maior (precisa poder ir atrás do jogador entre
     // plataformas vizinhas); parado, fica bem perto do posto.
-    const vRange = chasing ? 220 : 90;
+    //
+    // O alcance parado (20) é menor que a folga mínima usada no level design
+    // entre o posto do fantasma e a plataforma que ele guarda (60px na Seção
+    // 3 do abismo aéreo, 80px nos que ficam sobre o chão — ver Level2Scene.js).
+    // Precisa ser bem pequeno porque o SPRITE do sono é bem maior que a
+    // hitbox física dele: metade da altura do frame já são ~38px (frame
+    // 272px alto × escala 0.28 ÷ 2) — ou seja, mesmo com a hitbox nunca
+    // saindo do lugar, o desenho do fantasma (a "cauda" fica pendurada bem
+    // abaixo do corpo) já consome quase toda a folga de 60px sozinho.
+    // Medido ao vivo: com alcance 35 a cauda ainda entrava ~14px na
+    // plataforma; com 20, fica sempre por cima (testado com
+    // `sprite.getBounds()`, que reflete o desenho inteiro, não só a hitbox).
+    const vRange = chasing ? 220 : 20;
     if (this.y < this.homeY - vRange) this._sonoWanderAngle = Math.abs(this._sonoWanderAngle) % (Math.PI * 2);
     if (this.y > this.homeY + vRange) this._sonoWanderAngle = -Math.abs(this._sonoWanderAngle);
   }
