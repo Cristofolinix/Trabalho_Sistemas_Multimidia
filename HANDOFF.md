@@ -128,6 +128,42 @@ de cada escolha. Testado no dev server: seleção de personagem, corrida, pulo e
 com o chão conferidos visualmente para os 4 (ver "Dica de teste" abaixo para repetir).
 `npx vite build` sem erros.
 
+### RESOLVIDO (bugs reportados pelo usuário após testar): tamanho do Alex + mira
+Depois do primeiro commit desta sessão, o usuário testou e reportou 2 bugs (ambos
+corrigidos em commits separados, `cd89d61` e `33afa75`):
+1. **Alex (Agent Mike) aparecia bem menor que os outros 3.** Causa: a escala era
+   calculada a partir da altura do FRAME (32x32), mas cada personagem usa uma
+   fração diferente desse espaço pro desenho em si (Agent Mike só ~47%, os outros
+   ~81-94%). Corrigido normalizando pela altura REAL do desenho (`visibleH` em
+   `characters.js`, medido manualmente com um script de bounding-box — ver "Dica"
+   abaixo). Isso também exigiu recalcular a hitbox (`body`/`bodyOffset`) por
+   personagem em vez de usar uma % fixa do frame.
+2. **Tiro do Alex passava por cima das galinhas.** Causa mais sutil: o sprite do
+   Agent Mike não é desenhado centralizado no frame (fica na metade de baixo do
+   canvas), mas `this.x`/`this.y` do Player sempre foi o CENTRO DO FRAME (origem
+   padrão do Phaser, 0.5/0.5) — então toda habilidade que mira a partir de `this.y`
+   saía deslocada da posição visual real. Corrigido com `setOrigin()` por
+   personagem (`originX`/`originY` em `characters.js`), recentrando `this.x/y` no
+   centro visual de cada sprite. **Pegadinha:** mudar o origin DEPOIS que o body
+   físico já existe (`scene.physics.add.existing(this)`) faz o `body.setOffset()`
+   se comportar de um jeito difícil de prever a partir da fórmula "teórica" do
+   Phaser — não vale a pena tentar deduzir a fórmula exata, é mais rápido calibrar
+   ao vivo comparando `body.bottom` entre os 4 personagens até baterem (todos devem
+   dar o mesmo valor quando parados no chão — nesta fase, 640).
+   Também descobri que `body.setSize()`/`setOffset()` **não escalam automaticamente**
+   com `setScale()` neste projeto (valores são em px de mundo direto, não "nativos
+   vezes escala" como eu supunha inicialmente) — importante lembrar se for mexer em
+   hitbox de novo.
+
+**Pegadinha de teste** (custou bastante tempo nesta sessão): ao testar via
+`preview_eval` com `await new Promise(r => setTimeout(r, N))`, o "tempo de jogo"
+simulado às vezes anda MUITO mais devagar que N ms reais (a aba fica em segundo
+plano/sem foco pro Chrome controlado remotamente, e o `requestAnimationFrame` do
+Phaser é throttled). Isso fez um personagem parecer "preso flutuando no ar" quando
+na verdade só precisava de mais tempo real pra assentar. Se um teste parecer
+travado, **repita a leitura em uma chamada separada** (o tempo real entre chamadas
+do `preview_eval` costuma ser suficiente) antes de concluir que há um bug de física.
+
 **Erros cometidos e corrigidos ao longo da sessão** (útil para não repetir):
 - Tentei primeiro o pack "MV Platformer" (MoikMellah, OpenGameArt) — o usuário rejeitou:
   Berto/Weverton saíram com sprites **femininos** (o pack só tinha personagens fantasy
