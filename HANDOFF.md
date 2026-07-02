@@ -144,16 +144,31 @@ corrigidos em commits separados, `cd89d61` e `33afa75`):
    padrão do Phaser, 0.5/0.5) — então toda habilidade que mira a partir de `this.y`
    saía deslocada da posição visual real. Corrigido com `setOrigin()` por
    personagem (`originX`/`originY` em `characters.js`), recentrando `this.x/y` no
-   centro visual de cada sprite. **Pegadinha:** mudar o origin DEPOIS que o body
-   físico já existe (`scene.physics.add.existing(this)`) faz o `body.setOffset()`
-   se comportar de um jeito difícil de prever a partir da fórmula "teórica" do
-   Phaser — não vale a pena tentar deduzir a fórmula exata, é mais rápido calibrar
-   ao vivo comparando `body.bottom` entre os 4 personagens até baterem (todos devem
-   dar o mesmo valor quando parados no chão — nesta fase, 640).
-   Também descobri que `body.setSize()`/`setOffset()` **não escalam automaticamente**
-   com `setScale()` neste projeto (valores são em px de mundo direto, não "nativos
-   vezes escala" como eu supunha inicialmente) — importante lembrar se for mexer em
-   hitbox de novo.
+   centro visual de cada sprite.
+
+**IMPORTANTE — como o Arcade Physics do Phaser trata body/offset/scale** (não é
+óbvio e custou 2 sessões pra descobrir; ler antes de mexer em hitbox de novo):
+- `body.setSize(width, height)` define a hitbox em **px de MUNDO direto**. NÃO
+  é multiplicado pela escala do sprite (`setScale()`), mesmo chamando depois.
+- `body.setOffset(x, y)` (posição da hitbox) **É multiplicado pela escala** do
+  sprite automaticamente. Ou seja, `size` e `offset` usam unidades DIFERENTES —
+  dá pra copiar um valor de personagem pra outro sem recalcular tudo.
+- Isso interage mal com `setOrigin()` custom (não é 0.5/0.5): comparar só
+  `body.bottom` entre personagens (o que a sessão anterior fez) NÃO é
+  suficiente pra saber se a hitbox bate com os PÉS visuais — só garante que
+  todos encostam no mesmo Y do chão, não que o sprite não afunda visualmente
+  nele. Foi assim que o Alex ficou afundado na plataforma sem ninguém notar
+  antes de testar (os outros 3 bateram por coincidência de proporção).
+- **Método confiável pra calibrar**: ligar `physics.arcade.debug: true` em
+  `main.js` (desenha a hitbox por cima do sprite), tirar screenshot com zoom
+  na câmera e AJUSTAR OLHANDO O RETÂNGULO — não vale a pena tentar deduzir a
+  fórmula exata do Phaser (offset-origin-scale interagem de um jeito que não
+  bate com a documentação "teórica"). Lembrar de voltar `debug: false` depois.
+- Regra prática encontrada: se o personagem tem origin no centro do recorte
+  visível (como todos aqui) e os pés tocam a borda de baixo do frame (comum
+  nesses packs), o alvo é `body.bottom - this.y ≈ TARGET_HEIGHT/2` (28px nesta
+  fase) quando parado no chão — mas SEMPRE conferir visualmente com o debug,
+  o valor exato varia um pouco por causa de arredondamento.
 
 **Pegadinha de teste** (custou bastante tempo nesta sessão): ao testar via
 `preview_eval` com `await new Promise(r => setTimeout(r, N))`, o "tempo de jogo"
@@ -174,22 +189,52 @@ let t = performance.now();
 for (let i = 0; i < 120; i++) { t += 16.67; loop.step(t); }  // ~2s de jogo
 ```
 
-### RESOLVIDO (bug reportado pelo usuário após testar mais): arremesso da galinha
-O trote agarrava o jogador e jogava ele com um impulso de velocidade em direção
-à armadilha, mas a trajetória (arco de física) às vezes deixava o jogador na
-BEIRADA do buraco de espinhos em vez de cair dentro — como o dano só acontecia
-via colisão física com o `spike_tile`, se a trajetória errasse por pouco o
-jogador não tomava dano nem era resgatado, ficando preso ali.
-Corrigido em `Enemy.js` (`_throw()`): o impulso de velocidade continua (efeito
-visual do arremesso rumo ao buraco), mas agora o dano + reposicionamento seguro
-**não dependem mais de acertar a colisão** — 280ms depois do arremesso,
-`_throw()` chama `this.scene._hurtAndRespawn()` diretamente (o mesmo método
-usado quando o jogador pisa num espinho normalmente: tira 1 coração e teleporta
-pro último checkpoint seguro). `_hurtAndRespawn()` já ignora chamadas duplicadas
-via `player.invincible`, então não há risco de tomar dano 2x se a colisão física
-também acontecer de bater no espinho durante essa janela. Testado com o truque
-do `loop.step()` acima: dano aplicado (4→3 corações) e jogador reposicionado
-corretamente na sequência `carry → return → patrol` da galinha.
+### RESOLVIDO (2 rounds — o usuário rejeitou a 1ª tentativa): arremesso da galinha
+**1ª tentativa (rejeitada pelo usuário — "você não fez o que eu solicitei")**:
+o impulso de velocidade continuava, e um `time.delayedCall(280, ...)` chamava
+`_hurtAndRespawn()` direto, sem depender da colisão acertar o espinho. Funcionava
+mecanicamente (dano + respawn garantidos), mas o usuário queria que o jogador
+**realmente caísse em cima dos espinhos** de verdade, não um "dano por timer"
+disfarçado — a trajetória de física continuava caindo na beirada visualmente.
+
+**2ª tentativa (a que ficou)**: trocado o impulso de velocidade por um
+`this.scene.tweens.add(...)` que controla `x`/`y` do jogador DIRETAMENTE até um
+ponto calculado dentro da área de espinhos (`_nearestTrapEdge()` agora também
+define `this.throwTargetX`, mirando a 28% da largura do buraco a partir da
+beira de entrada — dentro dos espinhos, mas antes da pedra de passagem no meio
+do buraco). `y` do tween vai até 705 (dentro da hitbox do espinho, que começa
+em 688). `player.grabbed` continua `true` durante o tween (trava o
+`Player.update()`, sem gravidade/atrito brigando com a posição controlada) e só
+volta a `false` no `onComplete` do tween, que então chama `_hurtAndRespawn()`
+(mesma função de sempre: 1 coração a menos + teleporte pro checkpoint seguro).
+Motivo de ter trocado velocity por tween: o **atrito do próprio Player.update()**
+(`setVelocityX(velocity.x * 0.8)` a cada frame quando nenhuma tecla de direção
+está pressionada) matava o impulso horizontal do arremesso quase instantaneamente
+assim que `grabbed` virava `false` — por isso a trajetória nunca alcançava o
+meio do buraco, só a beirada. Um tween ignora esse atrito porque não usa
+velocidade nenhuma, só define a posição a cada frame.
+
+**Pegadinha de teste**: `window.__game.loop.step(t)` (o truque acima) avança o
+tempo de jogo (`scene.time`, `TimerEvent`/`delayedCall`) mas **NÃO avança
+Tweens** — um tween criado com `scene.tweens.add()` fica parado no lugar mesmo
+chamando `loop.step()` várias vezes; só progride com tempo real (`setTimeout`
+de verdade, sujeito à mesma lentidão/imprevisibilidade de aba em segundo plano
+já mencionada acima). Pra testar código que usa tween: rode a parte determinística
+(que não envolve tween) com `loop.step()`, e troque pra `await new Promise(r =>
+setTimeout(r, N))` com N generoso só na parte que precisa do tween rodar,
+conferindo o resultado com uma leitura em chamada separada se não convergir de
+primeira.
+
+### RESOLVIDO: Alex afundava visivelmente na plataforma
+Causa: ver o bloco "IMPORTANTE" logo acima sobre size/offset/scale do Arcade
+Physics. O `bodyOffset` do Alex (`characters.js`) estava calibrado com a mesma
+lógica usada pros outros 3 (fazer `body.bottom` bater em 640 pra todos), mas
+isso não garante que a hitbox bata com os PÉS visuais quando o origin não é
+0.5/0.5 — só por coincidência os outros 3 não afundavam visivelmente. Corrigido
+calibrando com `physics.arcade.debug: true` (ver hitbox desenhada) até o
+retângulo encostar exatamente nos pés do sprite: `bodyOffset` do Alex mudou de
+`[14, 12]` pra `[14, 18.5]`. Os outros 3 já estavam corretos (conferido também
+visualmente, sem mudança).
 
 **Erros cometidos e corrigidos ao longo da sessão** (útil para não repetir):
 - Tentei primeiro o pack "MV Platformer" (MoikMellah, OpenGameArt) — o usuário rejeitou:
