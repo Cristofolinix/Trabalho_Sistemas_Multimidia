@@ -99,6 +99,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   update() {
     if (!this.active) return;
 
+    // Inimigos flutuantes (sono/cálculo/prova) tem a gravidade desligada no
+    // construtor, mas `group.add()` (chamado logo depois, em _addEnemy) a
+    // REATIVA silenciosamente ao registrar o body no grupo de física — sem
+    // isto aqui, eles caem lentamente pela tela inteira até sumirem no vazio
+    // ou afundarem no chão. Reafirma todo frame por segurança (é barato:
+    // só troca a flag se já não estiver no valor certo).
+    if (this.def.isFloating && this.body.allowGravity) {
+      this.body.setAllowGravity(false);
+    }
+
     // Segurança: se caiu num buraco enquanto perseguia, volta para casa
     const worldH = this.scene.physics.world.bounds.height;
     if (this.y > worldH + 80) { this._resetHome(); return; }
@@ -111,30 +121,40 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     else                       this._updateRessaca();
   }
 
+  // Detecção de borda genérica: existe chão logo à frente na direção `dir`
+  // (+1/-1)? Usada por qualquer inimigo terrestre em qualquer estado (patrulha
+  // OU perseguição) pra não correr pra dentro de um buraco. Sempre true para
+  // inimigos flutuantes (não têm chão pra checar).
+  _isGroundAhead(dir) {
+    if (this.def.isFloating) return true;
+    const checkX = this.x + dir * (this.width * this.scaleX * 0.6);
+    // Usa a base REAL do hitbox (body.bottom) + uma margem pequena, em vez de
+    // um deslocamento fixo a partir de this.y — um valor fixo (ex: "+20")
+    // funciona só pra inimigos do tamanho do trote/ressaca; num inimigo bem
+    // maior (trabalho) o ponto de checagem ficava flutuando alguns pixels
+    // ACIMA do topo da plataforma, nunca batendo em nenhum tile — a checagem
+    // sempre dava "sem chão" nos dois sentidos e o inimigo travava no lugar.
+    const checkY = this.body.bottom + 6;
+    const plats = this.scene.platforms?.getChildren() ?? [];
+    for (const t of plats) {
+      if (!t.active) continue;
+      const b = t.getBounds();
+      if (checkX >= b.left && checkX <= b.right && checkY >= b.top && checkY <= b.bottom + 32) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   // Patrulha com detecção de borda (não cai em buracos)
   _patrol() {
     if (this._dir === undefined) this._dir = 1;
 
     // Detecção de borda: verifica se há chão à frente antes de avançar
-    // (só para inimigos que não flutuam)
-    if (!this.def.isFloating && this.body.blocked.down) {
-      const checkX = this.x + this._dir * (this.width * this.scaleX * 0.6);
-      const checkY = this.y + 20;
-      // Testa colisores estatic do grupo de plataformas da cena
-      const plats = this.scene.platforms?.getChildren() ?? [];
-      let groundAhead = false;
-      for (const t of plats) {
-        if (!t.active) continue;
-        const b = t.getBounds();
-        if (checkX >= b.left && checkX <= b.right && checkY >= b.top && checkY <= b.bottom + 32) {
-          groundAhead = true;
-          break;
-        }
-      }
-      if (!groundAhead) {
-        this._dir *= -1; // vira antes de cair
-        this.setFlipX(this._dir < 0);
-      }
+    // (só importa quando o inimigo está apoiado no chão)
+    if (this.body.blocked.down && !this._isGroundAhead(this._dir)) {
+      this._dir *= -1; // vira antes de cair
+      this.setFlipX(this._dir < 0);
     }
 
     if (this.x <= this.leftX || this.body.blocked.left) {
@@ -167,7 +187,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         break;
       }
 
-      // Perseguindo: corre na direção do jogador (só no chão, para não cair)
+      // Perseguindo: corre na direção do jogador, mas para na beirada de um
+      // buraco em vez de cair perseguindo (mesma checagem da patrulha).
       case 'chase': {
         if (!p || !p.isAlive) { this.state = 'return'; break; }
         const dx = p.x - this.x, dy = p.y - this.y;
@@ -177,7 +198,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
         const dir = dx < 0 ? -1 : 1;
         this.setFlipX(dir > 0);
-        this.setVelocityX(this.body.blocked.down ? dir * this.def.chaseSpeed : 0);
+        const canAdvance = this.body.blocked.down && this._isGroundAhead(dir);
+        this.setVelocityX(canAdvance ? dir * this.def.chaseSpeed : 0);
         break;
       }
 
@@ -199,7 +221,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       // Voltando para o ponto de origem, depois retoma a patrulha
       case 'return': {
         const dir = this.homeX < this.x ? -1 : 1;
-        this.setVelocityX(this.body.blocked.down ? dir * this.speed : 0);
+        const canAdvance = this.body.blocked.down && this._isGroundAhead(dir);
+        this.setVelocityX(canAdvance ? dir * this.speed : 0);
         this.setFlipX(dir > 0);
         if (Math.abs(this.x - this.homeX) < 20) {
           this.state = 'patrol';
@@ -324,24 +347,23 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   //  INIMIGOS FASE 2
   // ════════════════════════════════════════════════════════════════════════
   _updateSono() {
-    // Fantasma: movimento errante 2D (não em linha reta)
-    // Usa um ângulo que vai mudando lentamente de forma senoidal
+    // Fantasma: movimento errante 2D (não em linha reta), voando (sem gravidade
+    // — ver update()). Usa um ângulo que vai mudando lentamente de forma
+    // senoidal, e é "puxado" aos poucos em direção ao jogador quando perto.
     const t = this.scene.time.now / 1200;
     this._sonoWanderAngle += 0.018 * Math.sin(t); // deriva o ângulo vagarosamente
 
     const p = this.scene.player;
-    if (p && p.isAlive) {
-      const dx = p.x - this.x;
-      const dy = p.y - this.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+    const dist = (p && p.isAlive)
+      ? Math.hypot(p.x - this.x, p.y - this.y) : Infinity;
+    const chasing = dist < 350;
 
-      if (dist < 350) {
-        // Persegue: inclina o ângulo em direção ao jogador, mas nunca perfeitamente
-        const targetAngle = Math.atan2(dy, dx);
-        // Interpolação lenta — o fantasma "deriva" para o jogador de forma errante
-        const diff = targetAngle - this._sonoWanderAngle;
-        this._sonoWanderAngle += Math.sign(Math.sin(diff)) * 0.06;
-      }
+    if (chasing) {
+      // Persegue: inclina o ângulo em direção ao jogador, mas nunca perfeitamente
+      // — mais devagar que o trabalho em grupo (this.speed já é menor, 50 vs 75).
+      const targetAngle = Math.atan2(p.y - this.y, p.x - this.x);
+      const diff = targetAngle - this._sonoWanderAngle;
+      this._sonoWanderAngle += Math.sign(Math.sin(diff)) * 0.06;
     }
 
     // Aplica velocidade no ângulo atual
@@ -354,31 +376,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (this.x < this.leftX || this.x > this.rightX) {
       this._sonoWanderAngle = Math.PI - this._sonoWanderAngle;
     }
-    // Limites verticais: mantém o fantasma entre 80px e GROUND-30
-    const GROUND = this.scene.physics.world.bounds.height - 32;
-    if (this.y < 80)  this._sonoWanderAngle = Math.abs(this._sonoWanderAngle) % (Math.PI * 2);
-    if (this.y > GROUND - 30) this._sonoWanderAngle = -Math.abs(this._sonoWanderAngle);
+    // Limites verticais RELATIVOS ao posto do fantasma (homeY) — sem isto ele
+    // "deriva" livre pela tela toda (a versão antiga usava os limites do MUNDO
+    // inteiro) e podia acabar lá embaixo, dentro da área de espinhos do abismo,
+    // parecendo ter "caído" mesmo estando voando/sem gravidade. Enquanto
+    // perseguindo, o alcance é maior (precisa poder ir atrás do jogador entre
+    // plataformas vizinhas); parado, fica bem perto do posto.
+    const vRange = chasing ? 220 : 90;
+    if (this.y < this.homeY - vRange) this._sonoWanderAngle = Math.abs(this._sonoWanderAngle) % (Math.PI * 2);
+    if (this.y > this.homeY + vRange) this._sonoWanderAngle = -Math.abs(this._sonoWanderAngle);
   }
 
   _updateTrabalho() {
     const p = this.scene.player;
     if (p && p.isAlive && Math.abs(p.x - this.x) < 380 && Math.abs(p.y - this.y) < 120) {
-      // Modo ALERTA: persegue com detecção de borda
+      // Modo ALERTA: persegue com a mesma detecção de borda da patrulha
+      // (_isGroundAhead — usa body.bottom, funciona pra qualquer tamanho)
       const dx = p.x - this.x;
-      const nextX = this.x + Math.sign(dx) * (this.width * this.scaleX * 0.6);
-      const nextY = this.y + 20;
-      // Verifica se há chão na direção do jogador
-      const plats = this.scene.platforms?.getChildren() ?? [];
-      let groundAhead = false;
-      for (const t of plats) {
-        if (!t.active) continue;
-        const b = t.getBounds();
-        if (nextX >= b.left && nextX <= b.right && nextY >= b.top && nextY <= b.bottom + 32) {
-          groundAhead = true; break;
-        }
-      }
+      const dir = Math.sign(dx) || 1;
+      const groundAhead = this._isGroundAhead(dir);
       if (groundAhead || !this.body.blocked.down) {
-        this.setVelocityX(Math.sign(dx) * 175);
+        this.setVelocityX(dir * 175);
         this.setFlipX(dx < 0);
         // Pula para alcançar plataformas acima
         if (this.body.blocked.down && p.y < this.y - 30 && Math.random() < 0.025) {

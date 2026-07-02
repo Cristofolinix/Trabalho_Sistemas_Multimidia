@@ -6,7 +6,7 @@ import { CHARACTERS, DEFAULT_CHARACTER } from '../config/characters.js';
 import { FONT } from '../config/theme.js';
 import { audio } from '../audio/AudioManager.js';
 
-const WORLD_W   = 6400;
+const WORLD_W   = 6589;   // +189 vs. original — Seção 3 precisou ficar mais larga (ver _buildLevel)
 const WORLD_H   = 720;
 const GROUND    = 640;
 const TILE      = 32;
@@ -201,31 +201,35 @@ export class Level2Scene extends Phaser.Scene {
     //  LAYOUT GERAL: 6 seções temáticas distintas
     //  Seção 1 [0-1100]:     Abertura no chão  — Trabalho em Grupo
     //  Seção 2 [1100-2200]:  Plataformas altas — Cálculo flutuante
-    //  Seção 3 [2200-3600]:  ABISMO AÉREO (único caminho = plataformas)
-    //  Seção 4 [3600-4800]:  Chão com emboscada de Sono
-    //  Seção 5 [4800-5800]:  Arena da Prova (mini-chefe)
-    //  Seção 6 [5800-WORLD]: Corredor final
+    //  Seção 3 [2200-3739]:  ABISMO AÉREO (único caminho = plataformas)
+    //  Seção 4 [3739-4939]:  Chão com emboscada de Sono
+    //  Seção 5 [4939-5939]:  Arena da Prova (mini-chefe)
+    //  Seção 6 [5939-WORLD]: Corredor final
+    //
+    //  Seção 3 é 189px mais larga que a versão original (e todo o resto do
+    //  nível foi deslocado +189 pra abrir espaço) — ver nota grande logo
+    //  abaixo, dentro da seção 3, sobre por quê.
     // ════════════════════════════════════════════════════════════════════════
 
     // ── Chão (só onde existe caminho por baixo) ──────────────────────────
     this._addFloor(0, 1100);           // Seção 1
     // Seção 2: sem chão (plataformas) — mas coloca spikes embaixo
     // Seção 3: ABISMO — nenhum chão, forçando rota aérea
-    this._addFloor(3600, 4800);        // Seção 4
-    this._addFloor(4800, 5800);        // Arena da Prova
-    this._addFloor(5800, WORLD_W);     // Corredor final
+    this._addFloor(3739, 4939);        // Seção 4
+    this._addFloor(4939, 5939);        // Arena da Prova
+    this._addFloor(5939, WORLD_W);     // Corredor final
 
     // ── Spikes no grande abismo (Seções 2 e 3) ──────────────────────────
     // Seção 2: chão de spikes abaixo das plataformas flutuantes
     this._addSpikes(1100, 2200, 688);
     // Seção 3: o grande abismo aéreo — spikes de parede a parede
-    this._addSpikes(2200, 3600, 688);
+    this._addSpikes(2200, 3739, 688);
 
     // Spikes adicionais nos buracos normais das Seções 4 e 5
-    this._addSpikes(4700, 4800, 688);  // pequeno buraco antes da arena
+    this._addSpikes(4889, 4939, 688);  // pequeno buraco antes da arena
     this.traps = [
       { x1: 1100, x2: 2200 },
-      { x1: 2200, x2: 3600 },
+      { x1: 2200, x2: 3739 },
     ];
 
     // ════════════════════════════════════════════════════════════════════════
@@ -265,66 +269,82 @@ export class Level2Scene extends Phaser.Scene {
     this._addEnemy(1930, 420, 1870, 2100, 'calculo');   // círculo
 
     // ════════════════════════════════════════════════════════════════════════
-    //  SEÇÃO 3 [2200 - 3600]: ABISMO AÉREO OBRIGATÓRIO
-    //  Plataformas em zigzag moderado (dif. vert ≤ 120px cada pulo)
-    //  Fantasmas bloqueiam cada plataforma — OBRIGATÓRIO matar para passar
+    //  SEÇÃO 3 [2200 - 3739]: ABISMO AÉREO OBRIGATÓRIO
+    //  Fantasmas bloqueiam cada plataforma — OBRIGATÓRIO matar (ou desviar) pra passar
+    //
+    //  IMPORTANTE — por que as subidas usam 155px de vão (e não ~70-90px como
+    //  o resto do jogo): simulei fisicamente os pulos (gravidade 1000,
+    //  jumpVelocity ~555-575, corrida 195-225 conforme o personagem — ver
+    //  characters.js) e descobri que o vão original de ~70-90px pra uma SUBIDA
+    //  de 100px era impossível pra qualquer personagem — o pulo passa por
+    //  cima da plataforma-alvo ainda alto demais e só desce à altura dela
+    //  depois de já ter passado por cima, caindo direto no abismo (sem chão
+    //  de segurança embaixo, ao contrário da Seção 1). Pra uma subida de
+    //  100px, o ponto onde o jogador desce de volta a essa altura fica a
+    //  ~185-220px de distância da beira de partida (varia com a velocidade do
+    //  personagem); usei 155px de vão + plataforma de 4 tiles (128px) de
+    //  largura, testado com margem de erro de ±8px no instante do pulo E nos
+    //  3 valores de velocidade dos personagens (195/210/225) — sempre pousa.
+    //  Vãos de DESCIDA continuam ~80px (fáceis — descendo não precisa pular,
+    //  só andar pra fora da borda; testado sem problema).
     // ════════════════════════════════════════════════════════════════════════
     this._addPlatform(2180, 480, 6);   // plataforma larga de partida (y=480)
 
-    // Rota aérea: 6 plataformas com gaps alcançáveis
+    // Rota aérea: 6 plataformas — subidas com vão de 155px (ver nota acima),
+    // descidas com vão de 80px
     //        x     y    tiles
-    this._addPlatform(2440, 380, 3);   // sobe 100 ✓
-    this._addPlatform(2620, 460, 3);   // desce 80  ✓
-    this._addPlatform(2800, 360, 2);   // sobe 100 ✓ (estreita — difícil)
-    this._addPlatform(2960, 440, 3);   // desce 80  ✓
-    this._addPlatform(3130, 340, 3);   // sobe 100 ✓
-    this._addPlatform(3320, 420, 6);   // desce 80  ✓ (larga de chegada)
-    this._addKey(3440, 370);           // Chave 2 — só pela rota aérea
+    this._addPlatform(2527, 380, 4);   // sobe 100, vão 155 ✓ (testado: 195-225px/s, ±8px de timing)
+    this._addPlatform(2735, 460, 4);   // desce 80,  vão 80  ✓
+    this._addPlatform(3018, 360, 4);   // sobe 100, vão 155 ✓ (era 2 tiles/estreita — alargada pra 4, senão nem cabe o pouso com margem)
+    this._addPlatform(3226, 440, 4);   // desce 80,  vão 80  ✓
+    this._addPlatform(3509, 340, 6);   // sobe 100, vão 155 ✓ (larga de chegada)
+    this._addKey(3605, 290);           // Chave 2 — só pela rota aérea
 
-    // Fantasma em cada plataforma (bloqueiam fisicamente — devem ser mortos)
-    // Posicionado 60px acima da superfície da plataforma
-    this._addEnemy(2510, 320, 2440, 2700, 'sono');   // na 1ª plat (y=380 → 320)
-    this._addEnemy(2840, 300, 2800, 3040, 'sono');   // na 3ª plat (y=360 → 300)
-    this._addEnemy(3180, 280, 3130, 3380, 'sono');   // na 5ª plat (y=340 → 280)
+    // Fantasma em cada plataforma (bloqueiam fisicamente — devem ser mortos
+    // ou desviados; perseguem de forma errante e voam, mas ficam perto do
+    // posto quando o jogador não está por perto — ver Enemy.js _updateSono)
+    this._addEnemy(2597, 320, 2527, 2775, 'sono');   // na 1ª plat (y=380 → 320)
+    this._addEnemy(3080, 300, 3018, 3266, 'sono');   // na 3ª plat (y=360 → 300)
+    this._addEnemy(3571, 280, 3509, 3765, 'sono');   // na 5ª plat (y=340 → 280)
 
     // Cálculo patrulhando entre plataformas (extra dificuldade)
-    this._addEnemy(2700, 400, 2620, 2880, 'calculo'); // entre 2ª e 3ª
-    this._addEnemy(3040, 380, 2960, 3200, 'calculo'); // entre 4ª e 5ª
+    this._addEnemy(2815, 400, 2735, 2995, 'calculo'); // entre 2ª e 3ª
+    this._addEnemy(3306, 380, 3226, 3480, 'calculo'); // entre 4ª e 5ª
 
     // ════════════════════════════════════════════════════════════════════════
-    //  SEÇÃO 4 [3600 - 4800]: EMBOSCADA DO SONO — volta ao chão
+    //  SEÇÃO 4 [3739 - 4939]: EMBOSCADA DO SONO — volta ao chão
     // ════════════════════════════════════════════════════════════════════════
-    this._addPlatform(3550, 400, 6);   // plataforma de aterrissagem do abismo
+    this._addPlatform(3739, 400, 6);   // plataforma de aterrissagem do abismo
 
     // Buraco com spike antes da arena
-    this._addPlatform(4690, GROUND, 1); // pedra de passagem
+    this._addPlatform(4879, GROUND, 1); // pedra de passagem
 
     // Sono patrulha o chão (posicionado 80px acima do chão para flutuar bem)
-    this._addEnemy(3750, GROUND - 80, 3600, 4100, 'sono');
-    this._addEnemy(4100, GROUND - 30, 3900, 4400, 'trabalho');
-    this._addEnemy(4400, GROUND - 80, 4200, 4680, 'sono');
+    this._addEnemy(3939, GROUND - 80, 3789, 4289, 'sono');
+    this._addEnemy(4289, GROUND - 30, 4089, 4589, 'trabalho');
+    this._addEnemy(4589, GROUND - 80, 4389, 4869, 'sono');
 
     // Plataformas altas com cálculo
-    this._addPlatform(3800, 440, 4);
-    this._addPlatform(4100, 360, 3);
-    this._addEnemy(3860, 390, 3800, 4100, 'calculo');  // padrão vertical
+    this._addPlatform(3989, 440, 4);
+    this._addPlatform(4289, 360, 3);
+    this._addEnemy(4049, 390, 3989, 4289, 'calculo');  // padrão vertical
 
     // ════════════════════════════════════════════════════════════════════════
-    //  SEÇÃO 5 [4800 - 5800]: ARENA DA PROVA (mini-chefe)
+    //  SEÇÃO 5 [4939 - 5939]: ARENA DA PROVA (mini-chefe)
     // ════════════════════════════════════════════════════════════════════════
-    this._addPlatform(4900, 440, 6);   // plataforma de ataque elevada
-    this._addPlatform(5200, 360, 4);   // plataforma alta (~120px acima da anterior ✓)
-    this._addKey(5280, 310);           // Chave 3 (60px acima da plataforma)
+    this._addPlatform(5089, 440, 6);   // plataforma de ataque elevada
+    this._addPlatform(5389, 360, 4);   // plataforma alta (vão 108px + subida 80 — testado OK nas 2 velocidades extremas)
+    this._addKey(5469, 310);           // Chave 3 (50px acima da plataforma)
     // Prova flutua no centro da arena
-    this._addEnemy(5000, 360, 4820, 5200, 'prova');   // flutua à altura certa
-    this._addEnemy(5150, 310, 5100, 5400, 'calculo');  // círculo ao redor
+    this._addEnemy(5189, 360, 5009, 5389, 'prova');   // flutua à altura certa
+    this._addEnemy(5339, 310, 5289, 5589, 'calculo');  // círculo ao redor
 
     // ════════════════════════════════════════════════════════════════════════
-    //  SEÇÃO 6 [5800 - FIM]: CORREDOR FINAL ATÉ A PORTA
+    //  SEÇÃO 6 [5939 - FIM]: CORREDOR FINAL ATÉ A PORTA
     // ════════════════════════════════════════════════════════════════════════
-    this._addEnemy(5900, GROUND - 30, 5800, 6200, 'trabalho');
-    this._addEnemy(6100, GROUND - 80, 6000, 6400, 'sono');
-    this._addEnemy(6300, GROUND - 30, 6100, WORLD_W - 200, 'calculo');
+    this._addEnemy(6089, GROUND - 30, 5989, 6389, 'trabalho');
+    this._addEnemy(6289, GROUND - 80, 6189, 6589, 'sono');
+    this._addEnemy(6489, GROUND - 30, 6289, WORLD_W - 200, 'calculo');
   }
 
   _addFloor(xStart, xEnd) {

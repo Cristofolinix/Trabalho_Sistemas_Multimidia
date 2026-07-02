@@ -363,4 +363,123 @@ Phaser não expõe o jogo no `window` por padrão. Para testar cenas via `previe
 
 ### 7. Seletor de Fases (Dev Mode)
 - Integrada uma nova seção laranja **"[MODO DEV] TESTAR FASE"** na tela de Créditos (acessível pelo botão Créditos no menu principal).
+
+## ════════════════════════════════════════════════════════════════════════
+## RESOLVIDO NA TERCEIRA SESSÃO (02/07/2026) — BUGS REAIS DA FASE 2
+## ════════════════════════════════════════════════════════════════════════
+**Contexto**: o usuário passou uma sessão pro Gemini tentar corrigir bugs da
+Fase 2 (relatados por ele), mas os créditos acabaram no meio e o Gemini não
+terminou. **A seção "RESOLVIDO NA SEGUNDA SESSÃO" acima foi escrita pelo
+Gemini e superestima o que realmente ficou pronto** — em especial o item 5
+("Voo Errante do Sono... persegue o jogador suavemente" e "Prevenção de
+Quedas") já existia no CÓDIGO, mas tinha bugs que anulavam o efeito na
+prática. Testei tudo de novo do zero (não confiar cegamente num HANDOFF
+anterior sobre o que "já funciona" — testar é mais barato que confiar).
+
+### 1. RAIZ DE VÁRIOS BUGS: gravidade dos inimigos flutuantes era reativada
+`sono`/`calculo`/`prova` têm `isFloating: true` (gravidade desligada no
+construtor do `Enemy.js`), mas **`this.enemies.add(enemy, true)`** (chamado
+logo depois, em `_addEnemy`) **REATIVA a gravidade silenciosamente** ao
+registrar o body no grupo de física do Phaser. Isso sozinho explicava:
+"cálculo caindo na tela" (literal — caía por gravidade a fase inteira) e boa
+parte do "fantasma indo pro fundo do buraco". Corrigido em `Enemy.js`
+`update()`: reafirma `body.setAllowGravity(false)` todo frame pra qualquer
+inimigo `isFloating` (barato — só troca a flag se necessário).
+
+### 2. Fantasma (sono) ainda podia se afastar demais do posto
+Mesmo com a gravidade corrigida, o alcance vertical do "voo errante" usava os
+limites do MUNDO INTEIRO (`80` a `GROUND-30`, ~580px de alcance) em vez de
+relativo à posição de origem do fantasma — um sono era colocado pra guardar
+uma plataforma específica no abismo aéreo, mas podia derivar livremente até
+bem lá embaixo, na área de espinhos, parecendo ter "caído" mesmo voando sem
+gravidade. Corrigido: o limite vertical agora é relativo a `this.homeY`
+(±90px parado, ±220px perseguindo — precisa de mais alcance pra realmente ir
+atrás do jogador entre plataformas vizinhas).
+
+### 3. Trabalho em grupo travava (velocidade travada em 0) perto de plataformas grandes
+A detecção de borda (usada na patrulha E no modo de perseguição/alerta) usava
+`checkY = this.y + 20`, um deslocamento fixo que funciona pros inimigos do
+tamanho do trote/ressaca mas erra pro `trabalho` (bem maior) — o ponto de
+checagem ficava ~6px ACIMA do topo da plataforma onde ele estava parado,
+nunca batendo em nenhum tile. Resultado: `_isGroundAhead()` sempre retornava
+"sem chão" nos dois sentidos, e o `trabalho` ficava com velocidade 0
+permanentemente (o "preso no cenário" reportado). Corrigido: o ponto de
+checagem agora usa `this.body.bottom + 6` (a base REAL do hitbox) em vez de
+um número fixo — funciona pra qualquer tamanho de inimigo. Também unifiquei
+a detecção de borda numa função só (`_isGroundAhead(dir)`), reaproveitada
+pela patrulha, pelo modo alerta do `trabalho` e pelos estados `chase`/`return`
+do `trote` (ver item 4).
+
+### 4. Trote e trabalho perseguindo até caírem em buracos
+O estado `chase` do `trote` (`_updateTrote`) e o estado `return` de ambos
+**não tinham NENHUMA detecção de borda** — só a patrulha tinha. Corrigido
+usando a mesma `_isGroundAhead()` do item 3 nesses dois estados também: agora
+param na beirada em vez de continuar perseguindo pra dentro do buraco.
+
+### 5. A pior descoberta: 3 subidas do abismo aéreo eram FISICAMENTE IMPOSSÍVEIS
+O usuário reportou "uma plataforma acima da altura do pulo" — não é bem isso
+(nenhuma subida excede a altura máxima de pulo, ~156px), o problema real é
+mais sutil: **o vão HORIZONTAL era curto demais pro TEMPO que o pulo leva pra
+descer de volta àquela altura**. Simulei fisicamente (gravidade 1000,
+jumpVelocity ~555-575, velocidade de corrida 195-225 conforme o personagem —
+ver `characters.js`) usando `window.__game.loop.step()` pra controlar a
+física do jogador na mão (ver "Dica de teste" abaixo) e descobri: pra uma
+SUBIDA de 100px, o jogador só volta a estar naquela altura ~185-220px depois
+da beirada de partida — bem mais que os ~70-95px usados no resto do jogo.
+Com um vão curto, o jogador voa por CIMA da plataforma-alvo inteira (ainda
+alto demais) e só desce à altura dela DEPOIS de já ter passado por cima,
+caindo direto no abismo (sem chão de segurança ali, ao contrário da Seção 1).
+As 3 subidas do abismo aéreo (`_buildLevel` em `Level2Scene.js`) tinham
+exatamente esse problema — **eram impossíveis pra qualquer personagem**,
+travando a Chave 2 permanentemente atrás de um pulo que não existia.
+
+**Corrigido**: redesenhei a Seção 3 inteira com vãos de subida de 155px
+(testado com margem de erro de ±8px no instante do pulo E nas 3 velocidades
+de personagem — sempre pousa) e plataformas de 4 tiles (128px, a antiga
+"estreita" de 2 tiles foi alargada). Isso deixou a seção ~189px mais larga,
+então **todo o resto do nível a partir da Seção 4 foi deslocado +189** (WORLD_W
+foi de 6400 para 6589) — floors, spikes, plataformas, inimigos, chaves e a
+porta. Os vãos de DESCIDA continuam ~80px (não têm esse problema — descendo
+não precisa pular, só andar pra fora da borda; testado sem problema nas duas
+velocidades extremas).
+
+### Dica de teste CRÍTICA: simular física de pulo sem precisar jogar de verdade
+```js
+// precisa do hack window.__game em main.js (ver "Dica de teste" acima)
+function simulateJump(startX, startY, speed, jumpVel, maxFrames) {
+  const p = scene.player;
+  p.grabbed = true;              // trava Player.update() (sem input real brigando)
+  p.body.setAllowGravity(true);
+  p.setPosition(startX, startY);
+  p.setVelocity(speed, jumpVel); // jumpVel negativo = pra cima (ex: -560)
+  let t = performance.now();
+  let landed = false, landX = null;
+  for (let i = 0; i < maxFrames; i++) {
+    t += 16.67;
+    p.setVelocityX(speed);       // mantém "segurando a direção" (senão a física do
+    window.__game.loop.step(t);  // Player.update() reduziria a velocidade a cada frame)
+    if (p.body.blocked.down) { landed = true; landX = p.x; break; }
+    if (p.y > startY + 500) break; // caiu no vazio
+  }
+  p.grabbed = false;
+  return { landed, landX };
+}
+```
+Rodar isso com `startX`/`startY` na beirada de uma plataforma (`startY` =
+topo da plataforma menos ~28, ver seção de origin/hitbox acima) e comparar
+`landX` contra o intervalo `[x1, x2]` da plataforma-alvo diz, com certeza
+física (não achismo visual), se um pulo é possível. **Isso deveria ter sido
+feito ANTES de desenhar qualquer seção nova do nível** — teria evitado o bug
+#5 inteiro. Pra descidas, usar `jumpVel: 0` (não precisa pular, só andar pra
+fora da borda) — testar descida COM pulo dá falso-negativo (o pulo desnecessário
+faz o personagem voar por cima até de plataformas bem próximas).
+**Cuidado**: rodar vários testes em sequência rápida (dentro do mesmo `eval`,
+ou reaproveitando referências antigas de `scene`/`player` entre chamadas)
+pode dar resultados corrompidos ocasionais (ex: `landX` giant ou perto de
+zero, sem relação com o teste) — se um resultado parecer absurdo, refazer
+individualmente com `scene.start()` fresco antes de confiar nele.
+Screenshots (`preview_screenshot`) ficaram instáveis/travando nesta sessão
+depois de várias dezenas de `scene.start()` seguidas — se travar, reiniciar
+o preview server resolve; o `preview_eval` continua funcionando normalmente
+mesmo quando o screenshot trava, então dá pra continuar testando por lógica.
 - Permite saltar diretamente para a **Fase 1** ou **Fase 2** com qualquer personagem escolhido de forma rápida.
