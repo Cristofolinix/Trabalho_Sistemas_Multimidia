@@ -195,7 +195,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.pitDir = -1; return best.x2 + margin;                       // aborda pela direita
   }
 
-  // Arremessa o jogador para dentro do buraco e volta para casa
+  // Arremessa o jogador para dentro do buraco e volta para casa.
+  // O dano e o reposicionamento seguro NÃO dependem de a física acertar o
+  // espinho — a trajetória do arremesso podia deixar o jogador na beirada do
+  // buraco em vez de dentro, e aí ele nunca tomava dano nem era resgatado.
+  // Por isso o impulso é só o efeito visual do "arremesso"; o dano garantido
+  // vem logo em seguida, do mesmo jeito que pisar num espinho normalmente.
   _throw() {
     const p = this.carrying;
     this.carrying = null;
@@ -204,7 +209,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (p) {
       p.grabbed = false;
       p.body.setAllowGravity(true);
-      p.setVelocity(this.pitDir * 240, -260);
+      p.setVelocity(this.pitDir * 240, -260);   // impulso visual para dentro do buraco
+      this.scene.time.delayedCall(280, () => {
+        if (p.isAlive) this.scene._hurtAndRespawn();
+      });
     }
     audio.sfx('throw');
   }

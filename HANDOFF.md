@@ -163,6 +163,33 @@ Phaser é throttled). Isso fez um personagem parecer "preso flutuando no ar" qua
 na verdade só precisava de mais tempo real pra assentar. Se um teste parecer
 travado, **repita a leitura em uma chamada separada** (o tempo real entre chamadas
 do `preview_eval` costuma ser suficiente) antes de concluir que há um bug de física.
+**Melhor ainda**: descobri depois que dá pra AVANÇAR O LOOP DO PHASER NA MÃO, sem
+depender de tempo real nem do estado de foco da aba: `window.__game.loop.step(t)`
+(chamando em loop, incrementando `t` por ~16.67 a cada chamada, simula um frame a
+60fps). Isso torna o teste 100% determinístico — usar isso em vez de `setTimeout`
+sempre que possível. Exemplo (precisa do hack `window.__game` do main.js, ver acima):
+```js
+const loop = window.__game.loop;
+let t = performance.now();
+for (let i = 0; i < 120; i++) { t += 16.67; loop.step(t); }  // ~2s de jogo
+```
+
+### RESOLVIDO (bug reportado pelo usuário após testar mais): arremesso da galinha
+O trote agarrava o jogador e jogava ele com um impulso de velocidade em direção
+à armadilha, mas a trajetória (arco de física) às vezes deixava o jogador na
+BEIRADA do buraco de espinhos em vez de cair dentro — como o dano só acontecia
+via colisão física com o `spike_tile`, se a trajetória errasse por pouco o
+jogador não tomava dano nem era resgatado, ficando preso ali.
+Corrigido em `Enemy.js` (`_throw()`): o impulso de velocidade continua (efeito
+visual do arremesso rumo ao buraco), mas agora o dano + reposicionamento seguro
+**não dependem mais de acertar a colisão** — 280ms depois do arremesso,
+`_throw()` chama `this.scene._hurtAndRespawn()` diretamente (o mesmo método
+usado quando o jogador pisa num espinho normalmente: tira 1 coração e teleporta
+pro último checkpoint seguro). `_hurtAndRespawn()` já ignora chamadas duplicadas
+via `player.invincible`, então não há risco de tomar dano 2x se a colisão física
+também acontecer de bater no espinho durante essa janela. Testado com o truque
+do `loop.step()` acima: dano aplicado (4→3 corações) e jogador reposicionado
+corretamente na sequência `carry → return → patrol` da galinha.
 
 **Erros cometidos e corrigidos ao longo da sessão** (útil para não repetir):
 - Tentei primeiro o pack "MV Platformer" (MoikMellah, OpenGameArt) — o usuário rejeitou:
