@@ -529,3 +529,60 @@ depois de várias dezenas de `scene.start()` seguidas — se travar, reiniciar
 o preview server resolve; o `preview_eval` continua funcionando normalmente
 mesmo quando o screenshot trava, então dá pra continuar testando por lógica.
 - Permite saltar diretamente para a **Fase 1** ou **Fase 2** com qualquer personagem escolhido de forma rápida.
+
+## ════════════════════════════════════════════════════════════════════════
+## RESOLVIDO NA QUARTA SESSÃO (02/07/2026) — MAIS 2 BUGS REAIS DA FASE 2
+## ════════════════════════════════════════════════════════════════════════
+O usuário mandou mais 2 prints/relatos depois de continuar testando.
+
+### 1. Primeira plataforma da Arena da Prova era IMPOSSÍVEL de alcançar
+Print mostrava o jogador parado no chão sem conseguir subir. Causa: a
+plataforma de ataque elevada da Seção 5 estava em `y=440` — uma subida de
+**200px** a partir do chão (`GROUND=640`). A altura
+máxima de pulo é só ~156-165px (varia por personagem) — **200px excede o
+máximo pra QUALQUER personagem**, inclusive o Weverton (o de pulo mais
+forte). Confirmado simulando o pulo (mesmo truque de `loop.step()`): o
+jogador batia de cabeça na lateral da plataforma sem nunca alcançar o topo,
+ou simplesmente não subia o suficiente e caía de volta no chão na mesma
+altura de onde saiu.
+Diferente das subidas do abismo aéreo (Seção 3, sessão anterior), aqui o
+problema não era o VÃO horizontal — é que a ALTURA sozinha já era inviável,
+não importa a distância de corrida. Corrigido baixando a plataforma pra
+`y=540` (subida de 100px, dentro do limite com folga). A 2ª plataforma da
+arena e a Chave 3 desceram junto, mantendo a MESMA relação (vão 108px/subida
+80px) já validada entre elas nas 4 velocidades de personagem. Testado de
+novo do zero: chão→plataforma1 funciona pras 4 velocidades saltando de
+qualquer ponto num raio de ~140px antes da plataforma (bastante folga, não
+precisa de pixel-perfect); plataforma1→plataforma2 continua OK.
+**Lição**: ao validar uma subida, checar não só se o VÃO horizontal permite
+pousar dentro da plataforma-alvo, mas também se a ALTURA da subida sozinha
+está dentro do máximo de pulo (~156-165px) — um vão gigante não ajuda em
+nada se a altura já é maior que o pulo consegue alcançar fisicamente.
+
+### 2. Inimigo com mais de 1 hp (prova/trabalho) morrendo de uma habilidade só
+Usuário queria que a `prova` levasse **4 hits** pra morrer (estava com
+`hp: 3`) e "está morrendo com 1". Achado: **não é sobre a quantidade de hp**,
+é que algumas habilidades verificam a hitbox do inimigo VÁRIAS VEZES numa
+única ativação: o soco do Hugo confere 7 vezes em 210ms
+(`time.addEvent({delay:30, repeat:6, ...})`) e a onda do Berto confere a
+CADA FRAME por 420ms (`tweens.add({..., onUpdate: () => {...e.kill()...}})`).
+Cada uma dessas chamadas de `e.kill()` decrementava 1hp — ou seja, UMA
+ativação de habilidade já gastava 3+ "hits" de uma vez, matando um inimigo
+de `hp:3` (ou até `hp:4`) numa tacada só, mesmo a lógica de decremento em
+`kill()` estando funcionalmente correta.
+Corrigido com um debounce em `Enemy.kill()`: ignora chamadas repetidas que
+cheguem menos de 500ms depois da última que realmente contou (500ms cobre a
+duração de qualquer habilidade atual com folga, e o cooldown das habilidades
+é sempre bem maior que isso, então não atrapalha hits de ativações
+separadas de verdade). `prova.hp` também subiu pra 4, como pedido.
+**Pegadinha de teste**: validar isso com a onda do Berto via
+`await setTimeout` (tempo real) deu um resultado ENGANOSO (inimigo morreu de
+1 ativação mesmo com o debounce) — quase concluí que o fix não funcionava.
+A causa foi a MESMA lentidão de aba em segundo plano já documentada acima
+(a `Tween` que dirige a onda não avança direito com `loop.step()`, e o tempo
+real sofre com o throttling). O teste que realmente provou o fix: simular
+manualmente várias chamadas de `kill()` espaçadas por frames de
+`loop.step()` (determinístico, sem depender de Tween nem de tempo real) —
+30 chamadas ao longo de ~500ms simulados só descontaram 1hp, confirmando que
+a lógica está certa. **Sempre que possível, testar a LÓGICA isolada com
+`loop.step()` em vez de confiar num teste que depende de Tween/tempo real.**

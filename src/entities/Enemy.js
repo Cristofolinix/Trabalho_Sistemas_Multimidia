@@ -39,7 +39,7 @@ const TYPES = {
   },
   prova: {
     // grade 2×2: frame = 412×430 → visual ~55px de altura
-    sheet: 'enemy_prova', anim: 'prova-float', speed: 75, damage: 2, hp: 3,
+    sheet: 'enemy_prova', anim: 'prova-float', speed: 75, damage: 2, hp: 4,
     scale: 0.18, body: [300, 330], offset: [56, 50], isFloating: true
   },
 };
@@ -475,12 +475,23 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   kill() {
     if (!this.active) return;
+    // Debounce: algumas habilidades verificam a hitbox várias vezes numa
+    // única ativação (o soco do Hugo confere 7 vezes em 210ms; a onda do
+    // Berto confere a cada frame por 420ms) — sem isto, um inimigo com mais
+    // de 1hp (trabalho, prova) morria de UMA ativação só, gastando todos os
+    // hits de uma vez em vez de precisar de ativações separadas. 500ms cobre
+    // a duração de qualquer habilidade atual com folga, sem atrapalhar hits
+    // de verdade (o cooldown das habilidades é sempre bem maior que isso).
+    const now = this.scene.time.now;
+    if (this._lastHitAt !== undefined && now - this._lastHitAt < 500) return;
+    this._lastHitAt = now;
+
     if (this.hp > 1) {
       this.hp--;
       this.scene.tweens.add({ targets: this, alpha: 0.3, duration: 90, yoyo: true, repeat: 1, onComplete: () => this.alpha = 1 });
       return;
     }
-    
+
     // Se estava carregando o jogador, solta antes de morrer
     if (this.carrying) {
       this.carrying.grabbed = false;

@@ -342,12 +342,20 @@ export class Level2Scene extends Phaser.Scene {
     // ════════════════════════════════════════════════════════════════════════
     //  SEÇÃO 5 [4955 - 5939]: ARENA DA PROVA (mini-chefe)
     // ════════════════════════════════════════════════════════════════════════
-    this._addPlatform(5089, 440, 6);   // plataforma de ataque elevada
-    this._addPlatform(5389, 360, 4);   // plataforma alta (vão 108px + subida 80 — testado OK nas 2 velocidades extremas)
-    this._addKey(5469, 310);           // Chave 3 (50px acima da plataforma)
+    // A plataforma de ataque elevada estava em y=440 — uma subida de 200px a
+    // partir do chão (GROUND=640), impossível pra qualquer personagem (altura
+    // máxima de pulo é ~156-165px, MESMO pro Weverton). Baixada pra y=540
+    // (subida de 100px a partir do chão — o jogador tem o chão inteiro livre
+    // pra correr e pular na distância certa, sem a restrição de "beirada
+    // curta" das plataformas do abismo aéreo). A 2ª plataforma e a chave
+    // descem junto, mantendo a MESMA subida de 80px/vão de 108px entre elas
+    // já testado e validado nas 4 velocidades de personagem.
+    this._addPlatform(5089, 540, 6);   // plataforma de ataque elevada (subida 100 do chão ✓)
+    this._addPlatform(5389, 460, 4);   // plataforma alta (vão 108px + subida 80 — testado OK nas 4 velocidades)
+    this._addKey(5469, 410);           // Chave 3 (50px acima da plataforma)
     // Prova flutua no centro da arena
-    this._addEnemy(5189, 360, 5009, 5389, 'prova');   // flutua à altura certa
-    this._addEnemy(5339, 310, 5289, 5589, 'calculo');  // círculo ao redor
+    this._addEnemy(5189, 460, 5009, 5389, 'prova');   // flutua à altura certa
+    this._addEnemy(5339, 410, 5289, 5589, 'calculo');  // círculo ao redor
 
     // ════════════════════════════════════════════════════════════════════════
     //  SEÇÃO 6 [5939 - FIM]: CORREDOR FINAL ATÉ A PORTA
