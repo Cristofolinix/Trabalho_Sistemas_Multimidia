@@ -8,8 +8,14 @@
 // metade da altura do canvas 32x32 dele, enquanto o Tommy ocupa quase tudo).
 // 'visibleH' é a altura real do desenho (medida manualmente, em px nativos, na
 // pose de idle) — é isso que Player.js usa para igualar o tamanho visual dos 4.
-// 'body'/'bodyOffset' são a hitbox em px nativos (mesmo padrão do TYPES em
-// Enemy.js), medidos a partir do recorte visível de cada sprite.
+// 'body' (largura/altura da hitbox) é em px de MUNDO — o Arcade Physics do
+// Phaser NÃO escala `body.setSize()` pela escala do sprite. Já 'bodyOffset'
+// (posição da hitbox) É escalado automaticamente pela escala do personagem —
+// os dois campos usam unidades diferentes por causa dessa inconsistência do
+// Phaser, então não dá pra copiar um valor de um personagem pro outro sem
+// recalcular. Calibrado visualmente com `physics.arcade.debug: true` em
+// main.js (mostra a hitbox desenhada em cima do sprite) — é bem mais
+// confiável que tentar deduzir a fórmula exata do Phaser.
 // 'originX'/'originY' recentram o ponto de referência do sprite (this.x/this.y)
 // no CENTRO VISUAL do desenho em vez do centro do frame (que é o padrão do
 // Phaser, 0.5/0.5) — sem isso, personagens com desenho descentralizado no
@@ -40,7 +46,7 @@ export const CHARACTERS = {
     abilityCooldown: 1800,
     frameW: 32, frameH: 32,          // Agent Mike (Sprite Pack 4)
     visibleH: 15,
-    body: [12, 13], bodyOffset: [14, 12],
+    body: [12, 13], bodyOffset: [14, 18.5],
     originX: 0.594, originY: 0.75    // desenhado na metade de baixo do frame
   },
   berto: {

@@ -207,8 +207,8 @@ export class Level1Scene extends Phaser.Scene {
     [240, 2050, 4050, 6000].forEach(x => this._speaker(x));
 
     // Balões presos em plataformas
-    [[470, 480], [908, 280], [2000, 400], [3308, 245],
-     [4768, 315], [5900, 560]].forEach(([x, y]) => this._balloon(x, y));
+    [[470, 480], [2000, 400], [3278, 245],
+     [4738, 315], [5900, 560]].forEach(([x, y]) => this._balloon(x, y));
   }
 
   // Canhões de luz coloridos varrendo o céu (fixos na tela)

@@ -173,13 +173,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     player.grabbed = true;
     player.setVelocity(0, 0);
     player.body.setAllowGravity(false);
-    this.targetTrapX = this._nearestTrapEdge();  // também define this.pitDir
+    this.targetTrapX = this._nearestTrapEdge();  // também define pitDir/throwTarget*
     this.carryDeadline = this.scene.time.now + 4000;
     audio.sfx('grab');
   }
 
   // Descobre a beira da armadilha (buraco com espinhos) mais próxima.
-  // Retorna o X onde a galinha deve parar; define pitDir (para onde arremessar).
+  // Retorna o X onde a galinha deve parar (perto da beira, ainda em piso
+  // sólido) e define pitDir + o ponto exato (dentro do buraco, em cima do
+  // espinho) para onde o jogador será jogado — ver _throw().
   _nearestTrapEdge() {
     const traps = this.scene.traps || [];
     const margin = 26;
@@ -189,32 +191,55 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       const d = Math.abs(cx - this.x);
       if (d < bestDist) { bestDist = d; best = t; }
     });
-    if (!best) { this.pitDir = this.flipX ? 1 : -1; return this.x; }
+    if (!best) {
+      this.pitDir = this.flipX ? 1 : -1;
+      this.throwTargetX = this.x + this.pitDir * 60;
+      return this.x;
+    }
     const cx = (best.x1 + best.x2) / 2;
-    if (this.x <= cx) { this.pitDir = 1;  return best.x1 - margin; } // aborda pela esquerda
-    this.pitDir = -1; return best.x2 + margin;                       // aborda pela direita
+    const pitWidth = best.x2 - best.x1;
+    // Mira a ~28% da largura do buraco a partir da beira de entrada — bem
+    // dentro da área de espinhos, mas antes da pedra de passagem no meio.
+    if (this.x <= cx) {
+      this.pitDir = 1;
+      this.throwTargetX = best.x1 + pitWidth * 0.28;
+      return best.x1 - margin;                    // aborda pela esquerda
+    }
+    this.pitDir = -1;
+    this.throwTargetX = best.x2 - pitWidth * 0.28;
+    return best.x2 + margin;                       // aborda pela direita
   }
 
-  // Arremessa o jogador para dentro do buraco e volta para casa.
-  // O dano e o reposicionamento seguro NÃO dependem de a física acertar o
-  // espinho — a trajetória do arremesso podia deixar o jogador na beirada do
-  // buraco em vez de dentro, e aí ele nunca tomava dano nem era resgatado.
-  // Por isso o impulso é só o efeito visual do "arremesso"; o dano garantido
-  // vem logo em seguida, do mesmo jeito que pisar num espinho normalmente.
+  // Arremessa o jogador para DENTRO do buraco, em cima dos espinhos de verdade
+  // (não um impulso de física que podia deixar ele na beirada — o próprio
+  // atrito do Player.update() matava a velocidade do arremesso no meio do
+  // caminho). Um tween controla a posição diretamente até o ponto calculado
+  // em _nearestTrapEdge(); só ao chegar lá o dano acontece e o jogador é
+  // levado para a última área segura pisada (mesmo efeito de pisar num
+  // espinho normalmente).
   _throw() {
     const p = this.carrying;
     this.carrying = null;
     this.state = 'return';
     this.grabReadyAt = this.scene.time.now + 3000;  // "recarga" antes de agarrar de novo
-    if (p) {
-      p.grabbed = false;
-      p.body.setAllowGravity(true);
-      p.setVelocity(this.pitDir * 240, -260);   // impulso visual para dentro do buraco
-      this.scene.time.delayedCall(280, () => {
-        if (p.isAlive) this.scene._hurtAndRespawn();
-      });
-    }
     audio.sfx('throw');
+    if (!p) return;
+
+    // p.grabbed continua true durante o arremesso: Player.update() fica
+    // pausado (sem gravidade/atrito brigando com o tween) até o pouso.
+    this.scene.tweens.add({
+      targets: p,
+      x: this.throwTargetX,
+      y: 705,                 // dentro da hitbox do espinho (topo do buraco = 688)
+      duration: 380,
+      ease: 'Cubic.easeIn',   // acelera "caindo" nos espinhos
+      onComplete: () => {
+        p.grabbed = false;
+        p.body.setAllowGravity(true);
+        p.setVelocity(0, 0);
+        if (p.isAlive) this.scene._hurtAndRespawn();
+      }
+    });
   }
 
   // ════════════════════════════════════════════════════════════════════════

@@ -46,7 +46,7 @@ export class BootScene extends Phaser.Scene {
       });
     };
     Object.keys(CHARACTERS).forEach(c => {
-      mk(`${c}-idle`, `${c}_idle`, 12, true);
+      mk(`${c}-idle`, `${c}_idle`, 6, true);
       mk(`${c}-run`,  `${c}_run`,  18, true);
       mk(`${c}-jump`, `${c}_jump`,  1, false);
       mk(`${c}-fall`, `${c}_fall`,  1, false);
