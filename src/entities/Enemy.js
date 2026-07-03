@@ -125,26 +125,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     // Fase 2) já começa perseguindo no frame 1, sem o jogador ter tido
     // qualquer chance de reagir ou se afastar.
     //
-    // IMPORTANTE: não dá pra ler `scene.time.now` aqui no construtor — a
-    // cena chama create() (que cria os inimigos) ANTES do primeiro
-    // Clock.preUpdate() da própria cena nesse frame, então `scene.time.now`
-    // ainda está com um valor "não sincronizado" (0 ou o de antes da troca
-    // de cena). No frame seguinte ele pula direto pro tempo absoluto real
-    // do jogo (já bem maior que 1200), fazendo o período de graça terminar
-    // instantaneamente. Por isso o baseline só é capturado no primeiro
-    // update() (ver abaixo), quando o Clock já sincronizou de verdade.
-    this.spawnAt = null;
+    // Contagem em FRAMES (não em `scene.time.now`): a Clock de uma cena
+    // (`this.scene.time`) é o MESMO objeto reaproveitado toda vez que a
+    // cena reinicia (morrer e "Tentar Novamente", ou trocar de fase no
+    // Modo Dev) — ela não zera sozinha. Um inimigo recém-criado no
+    // reinício leria `scene.time.now` como o valor "congelado" de quando a
+    // cena rodou por último, e a comparação com o tempo atual (bem maior)
+    // já apareceria acima de 1200ms imediatamente, sem graça nenhuma. Contar
+    // frames em vez de tempo absoluto não depende de nenhum relógio
+    // acumulado — sempre começa do zero a cada `new Enemy(...)`.
+    this.spawnGraceFrames = 70; // ~1.2s a 60fps
   }
 
   // Só pode perseguir/alertar depois do período de graça pós-spawn.
   _canAggro() {
-    return (this.scene.time.now - this.spawnAt) > 1200;
+    return this.spawnGraceFrames <= 0;
   }
 
   update() {
     if (!this.active) return;
 
-    if (this.spawnAt === null) this.spawnAt = this.scene.time.now;
+    if (this.spawnGraceFrames > 0) this.spawnGraceFrames--;
 
     // Inimigos flutuantes (sono/cálculo/prova) tem a gravidade desligada no
     // construtor, mas `group.add()` (chamado logo depois, em _addEnemy) a
