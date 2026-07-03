@@ -171,8 +171,8 @@ export class Level3Scene extends Phaser.Scene {
       });
     }
 
-    // Trovões aleatórios na tempestade
-    if (Math.random() < 0.007) {
+    // Trovões aleatórios na tempestade — param quando a luta final começa
+    if (!this.bossesSpawned && Math.random() < 0.007) {
       this.cameras.main.flash(Phaser.Math.Between(150, 250), 255, 255, 255);
       audio.tone({ freq: 45, slideTo: 10, dur: 1.2, type: 'square', vol: 0.14 });
     }
@@ -398,6 +398,11 @@ export class Level3Scene extends Phaser.Scene {
     this.arenaSealed = true;
     const gate = this.platforms.create(4816, GROUND - 128, 'stone_platform');
     gate.setDisplaySize(32, 256).refreshBody();
+
+    // Reduzir o cooldown de habilidade para 0.5s na luta final (todos os personagens)
+    if (this.player) {
+      this.player.abilityMaxCooldown = 500;
+    }
   }
 
   spawnBossProjectile(boss, type) {
@@ -440,17 +445,33 @@ export class Level3Scene extends Phaser.Scene {
     this.time.delayedCall(4000, () => { if (proj.active) proj.destroy(); });
   }
 
-  // Weverton dashou contra um projétil de chefe: inverte o rumo dele de
-  // volta na direção de quem atirou, um pouco mais rápido (sensação de
-  // "rebate com força"), e marca `reflected` pra machucar o CHEFE (e não
-  // mais o jogador) no próximo contato — ver overlaps em create().
+  // Weverton dashou contra um projétil de chefe: o projétil vira verde, fica
+  // marcado como `reflected` e passa a PERSEGUIR ativamente o boss que atirou
+  // (homing) a cada 50ms até acertá-lo ou sair de cena. Isso garante que o
+  // rebate sempre acerta o chefe, sem depender de mira do jogador.
   _reflectProjectile(proj) {
     const boss = proj.sourceBoss;
     proj.reflected = true;
     proj.setTint(0x2ecc71);
-    const curSpeed = Math.hypot(proj.body.velocity.x, proj.body.velocity.y) || 250;
-    const angle = Phaser.Math.Angle.Between(proj.x, proj.y, boss.x, boss.y);
-    this.physics.velocityFromRotation(angle, curSpeed * 1.3, proj.body.velocity);
+    proj.body.setAllowGravity(false);
+    const homingSpeed = 480;
+
+    // Timer de homing: a cada 50ms redireciona o projétil para a posição atual do boss
+    const homingTimer = this.time.addEvent({
+      delay: 50,
+      repeat: 60, // máximo de 3s de perseguição (60 × 50ms)
+      callback: () => {
+        if (!proj.active || !boss.active) {
+          homingTimer.remove();
+          return;
+        }
+        const angle = Phaser.Math.Angle.Between(proj.x, proj.y, boss.x, boss.y);
+        this.physics.velocityFromRotation(angle, homingSpeed, proj.body.velocity);
+      }
+    });
+
+    // Destrói o timer se o projétil morrer antes do repeat acabar
+    proj.once('destroy', () => homingTimer.remove());
     audio.sfx('confirm');
   }
 
