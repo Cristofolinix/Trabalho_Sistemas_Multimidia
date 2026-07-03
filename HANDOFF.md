@@ -15,6 +15,32 @@ abrir a **porta** para avançar.
 - Rodar: `npm install` e depois `npm run dev` (abre em `http://localhost:3000`).
 - Build de produção: `npm run build`.
 
+## Ferramentas usadas (pontos para a apresentação)
+O professor pediu uma demonstração com "breve comentário sobre as ferramentas
+utilizadas". A dúvida foi se Phaser/Vite/JS "contam" como Sistemas Multimídia —
+sim, porque o PROJETO em si é um sistema multimídia (integra áudio, gráficos 2D
+e interação em tempo real); as ferramentas são o meio, não precisam ter
+"multimídia" no nome. Pontos pra usar no comentário:
+
+- **Web Audio API (o ponto mais forte)** — nenhum arquivo de áudio pré-gravado;
+  toda trilha sonora e SFX são **sintetizados em tempo real** via osciladores
+  (`square`, `sine`, `triangle`, `sawtooth`) com envelopes de volume (rampas de
+  ganho pra ataque/decaimento) — ver `src/audio/AudioManager.js`. Isso é síntese
+  digital de áudio pura, tópico central de sistemas multimídia.
+- **Phaser 3** — framework de engine de jogo sobre Canvas/WebGL: resolve
+  renderização 2D, animação por spritesheet (frames em grade, taxa de quadros
+  configurável), física e sincronização em tempo real entre áudio/gráficos/input
+  (o "game loop").
+- **Sprites 2D (spritesheets)** — múltiplos frames por grade (frameWidth/
+  frameHeight), pipeline de animação raster — outro tópico central da matéria.
+- **Vite** — build/dev server (bundling, hot reload); infraestrutura, não é o
+  ponto forte multimídia, mencionar rapidamente.
+
+Frase-resumo sugerida: "usamos o Phaser como motor multimídia (gráficos,
+animação, áudio, física em tempo real), com toda a trilha sonora sintetizada
+proceduralmente via Web Audio API em vez de arquivos gravados, e sprites 2D
+organizados em spritesheets animados por frame".
+
 ## Local do projeto e Git
 - A pasta de trabalho VARIA por máquina (o projeto é sincronizado só via Git, não pelo caminho).
   Em cada máquina nova: `git clone`, instalar Node.js (se não tiver) e rodar `npm install`
