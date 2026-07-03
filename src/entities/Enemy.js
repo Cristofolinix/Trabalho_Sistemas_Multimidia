@@ -173,7 +173,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     else if (this.type === 'tcc_mob') this._updateTccMob();
     else if (this.type === 'boss_tcc') this._updateBossTcc();
     else if (this.type === 'boss_banca') this._updateBossBanca();
-    else                       this._updateRessaca();
+    else this._updateRessaca();
   }
 
   // Detecção de borda genérica: existe chão logo à frente na direção `dir`
@@ -291,9 +291,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   // A cena (overlap jogador×inimigo) pergunta se esta galinha pode agarrar agora
   canGrab() {
     return this.type === 'trote'
-        && (this.state === 'patrol' || this.state === 'chase')
-        && !this.carrying
-        && this.scene.time.now > this.grabReadyAt;
+      && (this.state === 'patrol' || this.state === 'chase')
+      && !this.carrying
+      && this.scene.time.now > this.grabReadyAt;
   }
 
   // Inicia o agarrão: desativa o controle do jogador e escolhe a armadilha alvo
@@ -464,7 +464,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.setFlipX(vx < 0);
     this._sonoWanderAngle = Math.atan2(vy, vx); // mantém coerente pra quando começar a perseguir
 
-    if (this.x <= this.leftX) { this._sonoIdleDir = 1;  this.setFlipX(false); }
+    if (this.x <= this.leftX) { this._sonoIdleDir = 1; this.setFlipX(false); }
     else if (this.x >= this.rightX) { this._sonoIdleDir = -1; this.setFlipX(true); }
 
     // Alcance vertical parado bem pequeno (só a senoide, ±35% da velocidade
@@ -518,7 +518,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
       case 2: { // CÍRCULO: órbita em torno de (startX, startY)
         const radius = 80;
-        const speed  = t / 1100; // rotação lenta
+        const speed = t / 1100; // rotação lenta
         const targetX = this.homeX + Math.cos(speed) * radius;
         const targetY = this.startY + Math.sin(speed) * radius * 0.6;
         this.setVelocityX((targetX - this.x) * 6);
