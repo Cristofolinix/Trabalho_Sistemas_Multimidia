@@ -7,21 +7,16 @@ export class BootScene extends Phaser.Scene {
   constructor() { super({ key: 'BootScene' }); }
 
   preload() {
-    // ── Spritesheets externos (GrafxKid Sprite Packs, CC0) ──────────────────
-    // Cada personagem vem de um sprite pack diferente, com seu próprio tamanho
-    // de frame (ver characters.js) — o hitbox/escala se ajusta sozinho em Player.js.
     Object.entries(CHARACTERS).forEach(([c, cfg]) => {
       STATES.forEach(st =>
         this.load.spritesheet(`${c}_${st}`, `assets/player_${c}_${st}.png`,
           { frameWidth: cfg.frameW, frameHeight: cfg.frameH }));
     });
     this.load.spritesheet('ressaca_walk', 'assets/enemy_ressaca_walk.png',
-      { frameWidth: 71, frameHeight: 138 });   // zumbi CC0: 4 frames de 71x138
+      { frameWidth: 71, frameHeight: 138 });
     this.load.spritesheet('trote_run', 'assets/enemy_trote_run.png',
       { frameWidth: 32, frameHeight: 34 });
 
-    // ── Assets gerados por IA para a Fase 2 ──────────────────────────────
-    // sono e calculo: tira horizontal (4×1). trabalho e prova: grade (2×2)
     this.load.spritesheet('enemy_sono',     'assets/enemy_sono.png',     { frameWidth: 246, frameHeight: 272 });
     this.load.spritesheet('enemy_trabalho', 'assets/enemy_trabalho.png', { frameWidth: 438, frameHeight: 379 });
     this.load.spritesheet('enemy_calculo',  'assets/enemy_calculo.png',  { frameWidth: 233, frameHeight: 298 });
@@ -29,11 +24,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('stone_tile', 'assets/stone_tile.png');
     this.load.image('stone_platform', 'assets/stone_platform.png');
 
-    // ── Assets gerados por IA para a Fase 3 ──────────────────────────────
-    // sono_acumulado: grade 2×2 (450x282 por frame) — NÃO é tira 4×1. A
-    // config errada (225x564) cortava cada frame no meio da grade, mostrando
-    // metade de um fantasma da linha de cima colada com metade do de baixo
-    // (o "retângulo com dois fantasmas empilhados" reportado pelo usuário).
+    // grade 2×2 (450x282 por frame) — não é tira 4×1
     this.load.spritesheet('enemy_sono_acumulado', 'assets/enemy_sono_acumulado.png', { frameWidth: 450, frameHeight: 282 });
     this.load.spritesheet('enemy_tcc_mob',        'assets/enemy_tcc_mob.png',        { frameWidth: 236, frameHeight: 308 });
     this.load.spritesheet('boss_tcc',             'assets/boss_tcc.png',             { frameWidth: 495, frameHeight: 472 });
@@ -41,7 +32,6 @@ export class BootScene extends Phaser.Scene {
     this.load.image('canudo', 'assets/canudo.png');
     this.load.image('capelo', 'assets/capelo.png');
 
-    // ── Texturas desenhadas por código (itens, cenário, HUD) ──────────────
     this._makeArtTextures();
   }
 
@@ -57,7 +47,6 @@ export class BootScene extends Phaser.Scene {
     } else { go(); }
   }
 
-  // Animações globais (válidas em todas as cenas)
   _makeAnimations() {
     const mk = (key, sheet, rate, loop) => {
       if (this.anims.exists(key)) return;
@@ -72,16 +61,14 @@ export class BootScene extends Phaser.Scene {
       mk(`${c}-jump`, `${c}_jump`,  1, false);
       mk(`${c}-fall`, `${c}_fall`,  1, false);
     });
-    mk('ressaca-walk', 'ressaca_walk', 5,  true);   // zumbi anda devagar
+    mk('ressaca-walk', 'ressaca_walk', 5,  true);
     mk('trote-run',    'trote_run',    18, true);
-    
-    // Inimigos Fase 2
+
     mk('sono-float', 'enemy_sono', 6, true);
     mk('trabalho-run', 'enemy_trabalho', 8, true);
     mk('calculo-float', 'enemy_calculo', 6, true);
     mk('prova-float', 'enemy_prova', 6, true);
 
-    // Inimigos e Chefes Fase 3
     mk('sono-acumulado-float', 'enemy_sono_acumulado', 6, true);
     mk('tcc-mob-run',          'enemy_tcc_mob',        8, true);
     mk('boss-tcc-float',       'boss_tcc',             6, true);
@@ -91,7 +78,6 @@ export class BootScene extends Phaser.Scene {
   _makeArtTextures() {
     const PX = 3;
 
-    // ── Chave ──
     makeTexture(this, 'key_sprite', PX, [
       '..YYYY..',
       '.YyyyyY.',
@@ -106,7 +92,6 @@ export class BootScene extends Phaser.Scene {
       '...YYY..',
     ]);
 
-    // ── Porta ──
     makeTexture(this, 'door_sprite', PX, [
       '.NNNNNNNNNN.',
       'NNNNNNNNNNNN',
@@ -128,7 +113,6 @@ export class BootScene extends Phaser.Scene {
       '.NNNNNNNNNN.',
     ]);
 
-    // ── Tiles ──
     makeTexture(this, 'floor_tile', 2, [
       'kkkkkkkkkkkkkkkk',
       'llllllllllllllll',
@@ -159,7 +143,6 @@ export class BootScene extends Phaser.Scene {
       'llllllllllllllll',
     ]);
 
-    // ── Spikes ──
     makeTexture(this, 'spike_tile', 4, [
       '...kk...',
       '...kk...',
@@ -171,12 +154,10 @@ export class BootScene extends Phaser.Scene {
       'LLLLLLLL',
     ]);
 
-    // ── Projétil ──
     makeTexture(this, 'projectile', 3, [
       '.BBB.', 'BBBBB', 'BBwBB', 'BBBBB', '.BBB.',
     ], { ...PAL, w: 0xaed6f1 });
 
-    // ── Vômito (projétil do zumbi Ressaca) — gota verde doentia ──
     makeTexture(this, 'vomit', 3, [
       '.ZZ.',
       'ZZZZ',
@@ -186,7 +167,6 @@ export class BootScene extends Phaser.Scene {
       '..Z.',
     ], { ...PAL, Z: 0x8bc34a, z: 0x558b2f });
 
-    // ── Estrela verde simétrica (logo UNEMAT) ──
     const starPal = { X: 0x2e8b3d, x: 0x256d30 };
     makeTexture(this, 'star_green', 5, [
       '.......X.......',
@@ -206,12 +186,10 @@ export class BootScene extends Phaser.Scene {
       'X...........X..',
     ], starPal);
 
-    // ── Estrela dourada ──
     makeTexture(this, 'star_gold', 3, [
       '...Y...', '..YYY..', 'YYYYYYY', '.YYYYY.', '.YY.YY.',
     ]);
 
-    // ── Corações ──
     makeTexture(this, 'heart_full', 3, [
       '.RR..RR.', 'RRRRRRRR', 'RRRRRRRR', 'RRRRRRRR', '.RRRRRR.', '..RRRR..', '...RR...',
     ]);
@@ -219,18 +197,15 @@ export class BootScene extends Phaser.Scene {
       '.LL..LL.', 'L..LL..L', 'L......L', 'L......L', '.L....L.', '..L..L..', '...LL...',
     ]);
 
-    // ── Confete ──
     const cf = this.make.graphics({ x: 0, y: 0, add: false });
     cf.fillStyle(0xffffff, 1); cf.fillRect(0, 0, 6, 6);
     cf.generateTexture('confetti', 6, 6); cf.destroy();
 
-    // ── Faísca (partícula de efeitos de habilidade) ──
     const sp = this.make.graphics({ x: 0, y: 0, add: false });
     sp.fillStyle(0xffffff, 1);
-    sp.fillRect(3, 0, 2, 8); sp.fillRect(0, 3, 8, 2);  // formato de brilho/+
+    sp.fillRect(3, 0, 2, 8); sp.fillRect(0, 3, 8, 2);  // formato de brilho (+)
     sp.generateTexture('spark', 8, 8); sp.destroy();
 
-    // ── Fundos procedurais ──
     this._makeStarBg();
     this._makeCityscape();
   }

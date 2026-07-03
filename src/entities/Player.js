@@ -1,12 +1,8 @@
 import { audio } from '../audio/AudioManager.js';
 
-// Altura alvo na tela (px) — cada personagem vem de um sprite pack diferente
-// (ver characters.js), com frames e "espaço vazio" de tamanhos distintos;
-// normalizamos pela altura REAL do desenho (config.visibleH), não pela altura
-// do frame, para que os 4 apareçam do mesmo tamanho no jogo.
+// Normaliza a altura visual de todos os personagens independentemente do tamanho do frame.
 const TARGET_HEIGHT = 56;
 
-// Jogador. Sprite animado (GrafxKid, CC0) + habilidade especial por personagem.
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, config) {
     super(scene, x, y, `${config.key}_idle`, 0);
@@ -16,15 +12,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    // Recentra this.x/this.y no centro visual do desenho (ver characters.js) —
-    // sem isso, habilidades que miram a partir de this.y (tiro do Alex, soco do
-    // Hugo) saem deslocadas em personagens cujo desenho não é centralizado no
-    // frame (ex: Agent Mike, desenhado na metade de baixo do canvas 32x32).
+    // Recentra this.x/this.y no centro visual do desenho (ver characters.js).
     this.setOrigin(config.originX, config.originY);
 
-    // Escala calculada a partir da altura REAL do desenho (config.visibleH),
-    // não do frame — cada pack tem uma proporção de espaço vazio diferente.
-    // Hitbox em px nativos, também medida por personagem (ver characters.js).
     this._scale = TARGET_HEIGHT / config.visibleH;
     this.setScale(this._scale);
     this.setCollideWorldBounds(false);
@@ -34,7 +24,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.play(`${config.key}-idle`);
     this._anim = 'idle';
 
-    // Atributos
     this.hp = 4;
     this.maxHp = 4;
     this.isAlive = true;
@@ -43,25 +32,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.abilityCooldown = 0;
     this.abilityMaxCooldown = config.abilityCooldown ?? 1500;
 
-    // Modo Desenvolvedor: quando true, o jogador nunca perde HP.
-    // Ativado automaticamente ao usar o seletor de fase em Créditos.
     this.devMode = false;
 
-    // ── Estados especiais causados por inimigos ──────────────────────────
-    // Náusea (vômito do zumbi): enquanto > 0, os controles esquerda/direita
-    // ficam invertidos e a câmera balança (efeito tratado na cena).
-    this.nauseaTimer = 0;
-    // Lentidão (fantasma do Sono): enquanto > 0, velocidade reduzida a 30%
-    this.slowTimer = 0;
-    // Agarrado (galinha do trote): input desativado; a galinha posiciona o
-    // jogador enquanto o carrega até a armadilha.
-    this.grabbed = false;
+    this.nauseaTimer = 0;  // controles invertidos enquanto > 0
+    this.slowTimer = 0;    // velocidade a 30% enquanto > 0
+    this.grabbed = false;  // input desativado; galinha controla a posição
 
-    // Pulo com coyote-time e jump-buffer (sensação mais responsiva)
-    this.coyote = 0;        // ms desde que saiu do chão
-    this.jumpBuffer = 0;    // ms desde que apertou pulo
+    // Coyote-time e jump-buffer para pulos mais responsivos
+    this.coyote = 0;
+    this.jumpBuffer = 0;
 
-    // Controles (preenchidos pela cena)
     this.cursors = null;
     this.wasd = null;
     this.jumpKey = null;
@@ -73,9 +53,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   update(delta) {
     if (!this.isAlive) return;
-
-    // Enquanto agarrado pela galinha, o jogador não se controla: a própria
-    // galinha define a posição dele (ver Enemy.js, estado 'carry').
     if (this.grabbed) return;
 
     const onGround = this.body.blocked.down || this.body.touching.down;
@@ -83,16 +60,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     if (this.abilityCooldown > 0) this.abilityCooldown -= delta;
 
-    // Conta regressiva da náusea (vômito do zumbi)
     if (this.nauseaTimer > 0) {
       this.nauseaTimer -= delta;
       if (this.nauseaTimer <= 0) {
         this.nauseaTimer = 0;
-        this.clearTint();   // volta à cor normal quando passa o enjoo
+        this.clearTint();
       }
     }
 
-    // Conta regressiva da lentidão (fantasma do Sono)
     if (this.slowTimer > 0) {
       this.slowTimer -= delta;
       if (this.slowTimer <= 0) {
@@ -101,11 +76,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       }
     }
 
-    // ── Movimento horizontal ──────────────────────────────────────────────
     let left  = this.cursors.left.isDown  || this.wasd.left.isDown;
     let right = this.cursors.right.isDown || this.wasd.right.isDown;
 
-    // Náusea: inverte esquerda ↔ direita (frente vira trás e vice-versa)
     if (this.nauseaTimer > 0) { const tmp = left; left = right; right = tmp; }
 
     if (left && !this._dashActive) {
@@ -118,7 +91,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.setVelocityX(this.body.velocity.x * 0.8);
     }
 
-    // ── Coyote time + jump buffer ─────────────────────────────────────────
     if (onGround) this.coyote = 120; else this.coyote -= delta;
     this.jumpBuffer -= delta;
 
@@ -134,7 +106,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       audio.sfx('jump');
     }
 
-    // ── Animação por estado ───────────────────────────────────────────────
     let state;
     if (!onGround) state = this.body.velocity.y < 0 ? 'jump' : 'fall';
     else if (Math.abs(this.body.velocity.x) > 15) state = 'run';
@@ -144,7 +115,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.play(`${this.config.key}-${state}`, true);
     }
 
-    // ── Habilidade — F ────────────────────────────────────────────────────
     if (Phaser.Input.Keyboard.JustDown(this.abilityKey) && this.abilityCooldown <= 0) {
       this._useAbility();
     }
@@ -160,13 +130,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
-  // Hugo — soco: arco de impacto + faíscas, derruba inimigo à frente
   _abilityHugo() {
     audio.sfx('punch');
     const dir = this.flipX ? -1 : 1;
     const cx = this.x + dir * 40, cy = this.y;
 
-    // Arco do golpe (graphics) que cresce e some
     const arc = this.scene.add.graphics().setDepth(15);
     let r = 14;
     const drawArc = () => {
@@ -182,10 +150,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       onComplete: () => arc.destroy()
     });
 
-    // Faíscas no impacto
     this._sparks(cx + dir * 10, cy, dir);
 
-    // Hitbox de dano por alguns frames
     const hitbox = new Phaser.Geom.Rectangle(cx - 26, cy - 24, 52, 48);
     this.scene.time.addEvent({
       delay: 30, repeat: 6,
@@ -196,7 +162,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             e.kill();
           }
         });
-        // Também destrói projéteis de chefe (Fase 3) que passem pelo soco
         this.scene.bossProjectiles?.getChildren().forEach(pr => {
           if (pr.active && Phaser.Geom.Intersects.RectangleToRectangle(hitbox, pr.getBounds())) {
             pr.destroy();
@@ -207,7 +172,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this._showAbilityText('SOCO!');
   }
 
-  // Alex — projétil com rastro de partículas e clarão de saída
   _abilityAlex() {
     audio.sfx('shoot');
     const dir = this.flipX ? -1 : 1;
@@ -215,11 +179,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     proj.body.setAllowGravity(false);
     proj.setVelocityX(dir * 620);
 
-    // clarão de saída
     const flash = this.scene.add.circle(this.x + dir * 26, this.y, 12, 0xaed6f1, 0.8).setDepth(12);
     this.scene.tweens.add({ targets: flash, scale: 2, alpha: 0, duration: 180, onComplete: () => flash.destroy() });
 
-    // rastro de partículas seguindo o projétil
     const trail = this.scene.add.particles(0, 0, 'spark', {
       follow: proj, lifespan: 240, scale: { start: 0.7, end: 0 },
       speed: 20, frequency: 18, tint: 0x5ad1ff, blendMode: 'ADD'
@@ -227,7 +189,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     const stop = () => { trail.destroy(); proj.destroy(); };
     this.scene.physics.add.overlap(proj, this.scene.enemies, (p, e) => { e.kill(); this._sparks(p.x, p.y, dir); stop(); });
-    // Também destrói projéteis de chefe (Fase 3) que o tiro atravessar
     if (this.scene.bossProjectiles) {
       this.scene.physics.add.overlap(proj, this.scene.bossProjectiles, (p, pr) => { pr.destroy(); this._sparks(p.x, p.y, dir); stop(); });
     }
@@ -235,7 +196,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this._showAbilityText('TIRO!');
   }
 
-  // Berto — onda de área: anéis concêntricos + faíscas + tremor
   _abilityBerto() {
     audio.sfx('wave');
     this.scene.cameras.main.shake(180, 0.008);
@@ -246,7 +206,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         onComplete: () => ring.destroy()
       });
     }
-    // dano em raio crescente
     const dmg = this.scene.add.circle(this.x, this.y, 10, 0, 0);
     this.scene.tweens.add({
       targets: dmg, radius: 150, duration: 420,
@@ -254,7 +213,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.scene.enemies?.getChildren().forEach(e => {
           if (e.active && Phaser.Math.Distance.Between(this.x, this.y, e.x, e.y) < dmg.radius) e.kill();
         });
-        // Também destrói projéteis de chefe (Fase 3) que a onda alcançar
         this.scene.bossProjectiles?.getChildren().forEach(pr => {
           if (pr.active && Phaser.Math.Distance.Between(this.x, this.y, pr.x, pr.y) < dmg.radius) pr.destroy();
         });
@@ -265,7 +223,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this._showAbilityText('ONDA!');
   }
 
-  // Weverton — dash com fantasmas (afterimage) e invencibilidade breve
   _abilityWeverton() {
     if (this._dashActive) return;
     audio.sfx('dash');
@@ -275,7 +232,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.invincible = true;
     this.setAlpha(0.7);
 
-    // fantasmas que somem (afterimage)
+    // Afterimage: imagens do sprite que somem ao longo do dash
     const ghost = this.scene.time.addEvent({
       delay: 35, repeat: 5,
       callback: () => {
@@ -295,7 +252,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this._showAbilityText('DASH!');
   }
 
-  // Pequena explosão de faíscas
   _sparks(x, y, dir) {
     const e = this.scene.add.particles(x, y, 'spark', {
       lifespan: 350, speed: { min: 80, max: 220 },
@@ -317,35 +273,30 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
-  // Aplica lentidão (fantasma do Sono) — reduz velocidade a 30% por 4 segundos
   applySlow(ms = 4000) {
     if (!this.isAlive) return;
     const wasOk = this.slowTimer <= 0;
     this.slowTimer = Math.max(this.slowTimer, ms);
-    this.setTint(0x6688ff);  // azulado, como sono profundo
+    this.setTint(0x6688ff);
     if (wasOk) {
-      audio.sfx('nausea');       // reutiliza o sfx de estado alterado
+      audio.sfx('nausea');
       this._showAbilityText('SONO...');
     }
   }
 
-  // Aplica o estado de náusea (chamado quando o vômito do zumbi acerta).
-  // Enquanto ativo: controles invertidos + câmera balançando (efeito na cena).
   applyNausea(ms = 10000) {
     if (!this.isAlive) return;
     const wasHealthy = this.nauseaTimer <= 0;
-    this.nauseaTimer = ms;                 // renova sempre para 10s
-    this.setTint(0x9be36b);                // tom esverdeado de enjoo
+    this.nauseaTimer = ms;
+    this.setTint(0x9be36b);
     if (wasHealthy) {
       audio.sfx('nausea');
-      this._showAbilityText('ENJOADO!');   // aviso flutuante
+      this._showAbilityText('ENJOADO!');
     }
   }
 
   takeDamage(amount = 1) {
-    // Modo Dev (seletor de fase em Créditos): invencibilidade total
     if (this.devMode) {
-      // Pulsa a cor azulada para sinalizar que o dano foi absorvido
       this.setTint(0x00ccff);
       this.scene.time.delayedCall(120, () => this.clearTint());
       return;
@@ -373,7 +324,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.isAlive = true;
     this.invincible = false;
     this.alpha = 1;
-    // Limpa estados especiais para não renascer enjoado/agarrado
     this.nauseaTimer = 0;
     this.slowTimer = 0;
     this.grabbed = false;

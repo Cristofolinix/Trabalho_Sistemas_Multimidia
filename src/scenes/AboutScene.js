@@ -1,10 +1,5 @@
 import { FONT } from '../config/theme.js';
 
-// Tela "Sobre" — unifica COMO JOGAR, OBJETIVO e o bestiário de inimigos das
-// 3 fases. O conteúdo é mais alto que a tela (10 inimigos + descrição de
-// cada fase), então tudo fica dentro de um Container com máscara, e o
-// jogador rola com a roda do mouse ou as setas — só título e botão
-// "VOLTAR" ficam fixos fora da área de rolagem.
 export class AboutScene extends Phaser.Scene {
   constructor() { super({ key: 'AboutScene' }); }
 
@@ -16,7 +11,6 @@ export class AboutScene extends Phaser.Scene {
       fontFamily: FONT, fontSize: '22px', color: '#f1c40f'
     }).setOrigin(0.5).setDepth(10);
 
-    // ── Área de rolagem (entre o título e o botão voltar) ──────────────────
     const viewTop = 64, viewBottom = H - 66;
     const viewH = viewBottom - viewTop;
 
@@ -28,11 +22,10 @@ export class AboutScene extends Phaser.Scene {
     maskG.fillRect(0, viewTop, W, viewH);
     this.content.setMask(maskG.createGeometryMask());
 
-    // ── Helpers de layout (empilham verticalmente, cy = cursor local) ──────
     let cy = 10;
-    const lx = 60;                 // margem esquerda do texto
-    const iconX = lx + 30;         // centro dos ícones de inimigo
-    const textX = lx + 80;         // início do texto ao lado do ícone
+    const lx = 60;
+    const iconX = lx + 30;
+    const textX = lx + 80;
 
     const add = obj => { this.content.add(obj); return obj; };
 
@@ -51,9 +44,7 @@ export class AboutScene extends Phaser.Scene {
       cy += 16;
     };
 
-    // Ícone de inimigo normalizado pela altura do FRAME (não pelo desenho
-    // real, que varia — ver Enemy.js), pra todos saírem com altura visual
-    // parecida na lista, mesmo vindo de spritesheets bem diferentes.
+    // Normaliza todos os ícones pela altura do frame para saírem com tamanho visual parecido.
     const ICON_H = 46;
     const enemy = (sheet, anim, frameH, name, nameColor, descLines) => {
       const iconScale = ICON_H / frameH;
@@ -68,7 +59,6 @@ export class AboutScene extends Phaser.Scene {
       cy = rowTop + Math.max(ICON_H + 6, 18 + descLines.length * 15 + 6);
     };
 
-    // ═══════════════════ COMO JOGAR ═══════════════════
     sectionTitle('CONTROLES', '#3498db');
     line('SETAS / A D ......... mover');
     line('CIMA / W / ESPACO ... pular');
@@ -86,7 +76,6 @@ export class AboutScene extends Phaser.Scene {
 
     divider();
 
-    // ═══════════════════ FASE 1 — CALOURADA ═══════════════════
     sectionTitle('FASE 1 — CALOURADA', '#f39c12');
     line('A melhor fase do curso. Sobreviva', '#ecf0f1', lx);
     line('a ressaca e as galinhas que aplicam o trote pra chegar', '#ecf0f1', lx);
@@ -104,7 +93,6 @@ export class AboutScene extends Phaser.Scene {
 
     divider();
 
-    // ═══════════════════ FASE 2 — O MEIO DO CURSO ═══════════════════
     sectionTitle('FASE 2 — O MEIO DO CURSO', '#f39c12');
     line('O sono acumulado bate, os trabalhos em grupo', '#ecf0f1', lx);
     line('nao andam e as provas parecem nao ter fim.', '#ecf0f1', lx);
@@ -130,7 +118,6 @@ export class AboutScene extends Phaser.Scene {
 
     divider();
 
-    // ═══════════════════ FASE 3 — APRESENTACAO TCC ═══════════════════
     sectionTitle('FASE 3 — APRESENTACAO TCC', '#f39c12');
     line('Uma tempestade escura anuncia o dia final.', '#ecf0f1', lx);
     line('Enfrente a Banca Avaliadora e o proprio TCC', '#ecf0f1', lx);
@@ -159,7 +146,6 @@ export class AboutScene extends Phaser.Scene {
     const contentHeight = cy;
     this.maxScroll = Math.max(0, contentHeight - viewH);
 
-    // ── Rolagem: roda do mouse + setas CIMA/BAIXO ───────────────────────────
     const scrollBy = delta => {
       this.scrollY = Phaser.Math.Clamp(this.scrollY + delta, 0, this.maxScroll);
       this.content.y = viewTop - this.scrollY;
@@ -169,7 +155,6 @@ export class AboutScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-DOWN', () => scrollBy(40));
     this.input.keyboard.on('keydown-UP', () => scrollBy(-40));
 
-    // Barra de rolagem simples (só aparece se o conteúdo não couber inteiro)
     if (this.maxScroll > 0) {
       const barX = W - 22;
       this.add.rectangle(barX, viewTop + viewH / 2, 6, viewH, 0x1a2634).setDepth(9);
@@ -181,7 +166,6 @@ export class AboutScene extends Phaser.Scene {
       }).setOrigin(0.5);
     }
 
-    // Botão voltar (fixo, fora da área de rolagem)
     const back = this.add.rectangle(W / 2, H - 26, 220, 36, 0x7f8c8d, 0.9)
       .setInteractive({ useHandCursor: true }).setDepth(10);
     this.add.text(W / 2, H - 26, '< VOLTAR', { fontFamily: FONT, fontSize: '13px', color: '#fff' })

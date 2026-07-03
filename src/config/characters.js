@@ -1,27 +1,10 @@
-// Configuração central dos 4 personagens jogáveis.
-// 'color' é a cor da camisa; 'colorDark' é a sombra (usada no sprite).
+// Configuração dos 4 personagens jogáveis.
 //
-// Cada personagem vem de um GrafxKid Sprite Pack diferente (CC0, itch.io), cada
-// um com seu próprio tamanho de frame (frameW/frameH) e, mais importante, sua
-// própria quantidade de "espaço vazio" dentro do frame — por isso NÃO dá pra
-// calcular a escala só a partir do tamanho do frame (ex: o Agent Mike só ocupa
-// metade da altura do canvas 32x32 dele, enquanto o Tommy ocupa quase tudo).
-// 'visibleH' é a altura real do desenho (medida manualmente, em px nativos, na
-// pose de idle) — é isso que Player.js usa para igualar o tamanho visual dos 4.
-// 'body' (largura/altura da hitbox) é em px de MUNDO — o Arcade Physics do
-// Phaser NÃO escala `body.setSize()` pela escala do sprite. Já 'bodyOffset'
-// (posição da hitbox) É escalado automaticamente pela escala do personagem —
-// os dois campos usam unidades diferentes por causa dessa inconsistência do
-// Phaser, então não dá pra copiar um valor de um personagem pro outro sem
-// recalcular. Calibrado visualmente com `physics.arcade.debug: true` em
-// main.js (mostra a hitbox desenhada em cima do sprite) — é bem mais
-// confiável que tentar deduzir a fórmula exata do Phaser.
-// 'originX'/'originY' recentram o ponto de referência do sprite (this.x/this.y)
-// no CENTRO VISUAL do desenho em vez do centro do frame (que é o padrão do
-// Phaser, 0.5/0.5) — sem isso, personagens com desenho descentralizado no
-// canvas (ex: Agent Mike, desenhado na metade de baixo do frame 32x32) fazem
-// habilidades que usam this.y (mira do tiro, área do soco) saírem deslocadas
-// da posição real do personagem na tela.
+// 'visibleH': altura real do desenho em px nativos (pose idle) — Player.js usa para
+//             igualar o tamanho visual dos 4, já que cada sprite pack tem espaço vazio diferente.
+// 'body':     hitbox em px de MUNDO (Arcade Physics NÃO escala com setSize).
+// 'bodyOffset': escalado automaticamente pelo Phaser — unidades diferentes de 'body'.
+// 'originX/Y': recentra this.x/this.y no centro visual (evita habilidades saírem deslocadas).
 export const CHARACTERS = {
   hugo: {
     key: 'hugo',
@@ -31,7 +14,7 @@ export const CHARACTERS = {
     speed: 210,
     jumpVelocity: -560,
     abilityCooldown: 1200,
-    frameW: 16, frameH: 16,          // Mr. Man (Sprite Pack 1)
+    frameW: 16, frameH: 16,
     visibleH: 15,
     body: [7, 13], bodyOffset: [5, 3],
     originX: 0.469, originY: 0.5
@@ -44,10 +27,10 @@ export const CHARACTERS = {
     speed: 200,
     jumpVelocity: -560,
     abilityCooldown: 1800,
-    frameW: 32, frameH: 32,          // Agent Mike (Sprite Pack 4)
+    frameW: 32, frameH: 32,
     visibleH: 15,
     body: [12, 13], bodyOffset: [14, 18.5],
-    originX: 0.594, originY: 0.75,   // desenhado na metade de baixo do frame
+    originX: 0.594, originY: 0.75,   // desenhado na metade inferior do frame
     menuOffsetX: 14
   },
   berto: {
@@ -58,7 +41,7 @@ export const CHARACTERS = {
     speed: 195,
     jumpVelocity: -555,
     abilityCooldown: 2600,
-    frameW: 32, frameH: 32,          // Tommy (Sprite Pack 3)
+    frameW: 32, frameH: 32,
     visibleH: 28,
     body: [12, 24], bodyOffset: [11, 8],
     originX: 0.5, originY: 0.547
@@ -71,7 +54,7 @@ export const CHARACTERS = {
     speed: 225,
     jumpVelocity: -575,
     abilityCooldown: 900,
-    frameW: 32, frameH: 48,          // Diego (Sprite Pack 7)
+    frameW: 32, frameH: 48,
     visibleH: 39,
     body: [20, 33], bodyOffset: [6, 15],
     originX: 0.484, originY: 0.583

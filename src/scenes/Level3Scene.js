@@ -23,8 +23,7 @@ export class Level3Scene extends Phaser.Scene {
     this.bossesSpawned = false;
     this.arenaSealed = false;
     this.bossesDefeated = false;
-    
-    // Configurações do vento
+
     this.windForce = 0;
     this.nextWindChange = 0;
     this.windText = null;
@@ -50,7 +49,7 @@ export class Level3Scene extends Phaser.Scene {
     const cfg = CHARACTERS[this.selectedChar];
     this.spawnPoint = { x: 90, y: 560 };
     this.player = new Player(this, this.spawnPoint.x, this.spawnPoint.y, cfg);
-    this.player.devMode = this.devMode; // invencível no modo dev
+    this.player.devMode = this.devMode;
     this.checkpoint = { ...this.spawnPoint };
 
     this.player.cursors = this.input.keyboard.createCursorKeys();
@@ -64,36 +63,29 @@ export class Level3Scene extends Phaser.Scene {
     this.player.abilityKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
 
     this.physics.add.collider(this.player, this.platforms);
-    // Inimigos flutuantes (sono_acumulado, boss_tcc — ver Enemy.js
-    // `isFloating`) voam livremente e não devem colidir com plataformas,
-    // senão ficam "presos" na borda ao cruzá-las (mesmo bug já corrigido
-    // na Fase 2 — ver Level2Scene.js).
+    // Inimigos flutuantes não devem colidir com plataformas — ficam "presos" na borda.
     this.physics.add.collider(this.enemies, this.platforms, null, (enemy) => !enemy.def.isFloating);
 
-    // Dano ao encostar nos inimigos ordinários
     this.physics.add.overlap(this.player, this.enemies, (pl, en) => {
       if (pl.grabbed || this.bossesDefeated) return;
-      
-      // Efeito do Sono Acumulado
+
       if (en.type === 'sono_acumulado' && !pl.invincible) {
-        pl.applySlow(5000); // 5 segundos de lentidão
+        pl.applySlow(5000);
       }
 
       pl.takeDamage(en.damage);
       pl.setVelocity((pl.x < en.x ? -1 : 1) * 200, -220);
     });
 
-    // Dano dos projéteis dos Chefes
     this.physics.add.overlap(this.player, this.bossProjectiles, (pl, proj) => {
       if (pl.grabbed || this.bossesDefeated || !proj.active) return;
 
-      // Weverton dashando CONTRA um projétil: devolve na direção do chefe
-      // que atirou, em vez de acertar o jogador (ver _reflectProjectile).
+      // Weverton dashando contra um projétil: devolve homing para o chefe.
       if (pl._dashActive && proj.sourceBoss && proj.sourceBoss.active && !proj.reflected) {
         this._reflectProjectile(proj);
         return;
       }
-      if (proj.reflected) return; // já devolvido — só machuca chefes agora
+      if (proj.reflected) return;
 
       pl.takeDamage(proj.damageAmt);
       pl.setVelocity((pl.x < proj.x ? -1 : 1) * 200, -220);
@@ -101,7 +93,6 @@ export class Level3Scene extends Phaser.Scene {
       proj.destroy();
     });
 
-    // Projétil devolvido pelo dash do Weverton: acerta o chefe que atirou
     this.physics.add.overlap(this.bossProjectiles, this.enemies, (proj, en) => {
       if (!proj.reflected || !en.active || !en.def.isBoss) return;
       en.kill();
@@ -109,7 +100,6 @@ export class Level3Scene extends Phaser.Scene {
       proj.destroy();
     });
 
-    // Destruir projéteis na colisão com plataformas
     this.physics.add.collider(this.bossProjectiles, this.platforms, (proj) => {
       this._splat(proj.x, proj.y, proj.splatColor ?? 0xff3333);
       proj.destroy();
@@ -128,7 +118,6 @@ export class Level3Scene extends Phaser.Scene {
       if (this.keysCollected >= this.totalKeys && this.door) this.door.open();
     });
 
-    // Porta final para a Banca
     this.physics.add.overlap(this.player, this.door, () => {
       if (this.door && this.door.tryEnter(this.keysCollected)) {
         audio.sfx('door');
@@ -148,7 +137,6 @@ export class Level3Scene extends Phaser.Scene {
     });
     this.input.keyboard.on('keydown-M', () => audio.toggleMute());
 
-    // Trilha sonora sombria e assustadora da Fase 3
     audio.unlock();
     audio.startScaryMusic();
 
@@ -161,11 +149,10 @@ export class Level3Scene extends Phaser.Scene {
       return;
     }
 
-    const sx = this.cameras.main.scrollX;
     this.player.update(delta);
 
-    // Mover nuvens de fundo
     if (this.clouds) {
+      const sx = this.cameras.main.scrollX;
       this.clouds.forEach(c => {
         c.x -= c.speed;
         if (c.x < -300) c.x = WORLD_W + 100;
@@ -173,38 +160,27 @@ export class Level3Scene extends Phaser.Scene {
       });
     }
 
-    // Trovões aleatórios na tempestade — param quando a luta final começa
     if (!this.bossesSpawned && Math.random() < 0.007) {
       this.cameras.main.flash(Phaser.Math.Between(150, 250), 255, 255, 255);
       audio.tone({ freq: 45, slideTo: 10, dur: 1.2, type: 'square', vol: 0.14 });
     }
 
-    // Mecânica de vento
     this._updateWind(time);
 
-    // Revela a arena e os chefes bem ANTES da porta (x=4800), pra dar tempo
-    // do jogador vê-los se aproximando em vez de topar com eles só depois
-    // de já ter atravessado a porta (a porta não tem colisão sólida — ela só
-    // "abre" visualmente, então o jogador sempre conseguia passar direto por
-    // ela mesmo sem chaves suficientes, chegando na arena vazia).
+    // Revela a arena antes da porta para o jogador ver os chefes se aproximando.
     if (!this.bossesSpawned && this.player.x > 4620) {
       this._spawnBossArena();
     }
-    // O "portão" que tranca a saída só fecha DEPOIS que o jogador realmente
-    // passa por ele — se fechasse junto com o spawn dos chefes (que agora
-    // acontece bem antes), travaria o jogador do lado de FORA da arena,
-    // incapaz de entrar.
+    // Sela a arena apenas depois que o jogador já passou por ela, não antes.
     if (this.bossesSpawned && !this.arenaSealed && this.player.x > 4816) {
       this._sealArena();
     }
 
-    // Checar morte por queda
     if (this.player.isAlive && this.player.y > WORLD_H + 40) this._hurtAndRespawn();
   }
 
   _updateWind(time) {
     if (time > this.nextWindChange) {
-      // 0 = sem vento, -1 = vento para esquerda, 1 = vento para direita
       const roll = Phaser.Math.Between(1, 3);
       if (roll === 1) {
         this.windForce = -120;
@@ -219,7 +195,6 @@ export class Level3Scene extends Phaser.Scene {
       this.nextWindChange = time + Phaser.Math.Between(4000, 7000);
     }
 
-    // Aplica força de vento no jogador no ar
     if (this.windForce !== 0 && this.player.isAlive && !this.player.body.blocked.down && !this.player._dashActive) {
       this.player.body.velocity.x += this.windForce * 0.08;
     }
@@ -238,29 +213,23 @@ export class Level3Scene extends Phaser.Scene {
   _buildBackground() {
     const W = this.scale.width, H = this.scale.height;
 
-    // Céu sombrio de tempestade - gradiente quase preto
     this.sky = this.add.graphics().setScrollFactor(0).setDepth(-40);
     this.sky.fillGradientStyle(0x020406, 0x020406, 0x090f14, 0x090f14, 1);
     this.sky.fillRect(0, 0, W, H);
 
-    // Céu de vitória ensolarado (azul/dourado) - inicialmente invisível (alpha = 0)
     this.victorySky = this.add.graphics().setScrollFactor(0).setDepth(-31);
     this.victorySky.fillGradientStyle(0x3498db, 0x3498db, 0xaed6f1, 0xf1c40f, 1);
     this.victorySky.fillRect(0, 0, W, H);
     this.victorySky.setAlpha(0);
 
-    // Nuvens de tempestade escuras
     this.clouds = [];
     for (let i = 0; i < 14; i++) {
       const cx = (i / 14) * WORLD_W + Phaser.Math.Between(-100, 100);
       const cy = Phaser.Math.Between(40, 220);
       const cg = this.add.graphics().setDepth(-35);
       const cr = Phaser.Math.Between(100, 240);
-      // Sorteia cada canal RGB separadamente dentro de uma faixa bem escura.
-      // `Phaser.Math.Between` direto em dois inteiros 0xRRGGBB interpola o
-      // número EMPACOTADO, não cada canal — um valor "no meio" podia cair
-      // em qualquer combinação (ex.: um verde ou azul bem vivo), fazendo
-      // nuvens de tempestade saírem coloridas em vez de escuras/sombrias.
+      // Sorteia cada canal RGB separadamente: interpolar dois inteiros 0xRRGGBB
+      // diretamente pode gerar cores vivas no meio do caminho.
       const cloudColor = Phaser.Display.Color.GetColor(
         Phaser.Math.Between(5, 15), Phaser.Math.Between(7, 19), Phaser.Math.Between(10, 26)
       );
@@ -270,7 +239,6 @@ export class Level3Scene extends Phaser.Scene {
       this.clouds.push({ g: cg, x: cx, speed: 0.05 + i * 0.006 });
     }
 
-    // Prédios universitários escuros e assustadores
     const buildingGfx = this.add.graphics().setDepth(-32);
     for (let i = 0; i < 28; i++) {
       const bx = i * 240 + Phaser.Math.Between(0, 50);
@@ -278,18 +246,16 @@ export class Level3Scene extends Phaser.Scene {
       const by = GROUND - bh;
       buildingGfx.fillStyle(0x05090f, 1);
       buildingGfx.fillRect(bx, by, Phaser.Math.Between(80, 140), bh);
-      // Quase todas as janelas apagadas (sombrio), pouquíssimas piscando
       for (let wy = by + 12; wy < GROUND - 12; wy += 26) {
         for (let wx = bx + 8; wx < bx + 120; wx += 22) {
           if (Math.random() < 0.07) {
-            buildingGfx.fillStyle(0xd35400, 0.45); // luz alaranjada fraca
+            buildingGfx.fillStyle(0xd35400, 0.45);
             buildingGfx.fillRect(wx, wy, 10, 12);
           }
         }
       }
     }
 
-    // Chuva pesada lateral
     this.rainEmitter = this.add.particles(0, -20, 'spark', {
       x: { min: -200, max: W + 200 }, y: { min: -20, max: 0 },
       lifespan: 800,
@@ -301,7 +267,6 @@ export class Level3Scene extends Phaser.Scene {
   }
 
   _buildLevel() {
-    // Chão de blocos escuros e molhados
     const floor = [
       [0, 1200],
       [1450, 2400],
@@ -310,98 +275,84 @@ export class Level3Scene extends Phaser.Scene {
     ];
     floor.forEach(([a, b]) => this._addFloor(a, b));
 
-    // Abismos de espinhos afiados
     const pits = [[1200, 1450], [2400, 2700], [3700, 3950]];
     pits.forEach(([a, b]) => this._addSpikes(a, b, 688));
     this.traps = pits.map(([x1, x2]) => ({ x1, x2 }));
 
-    // ── Seção 1: Entrada e Chave 1 ──────────────────────────────────────
+    // Seção 1: entrada e Chave 1
     this._addPlatform(300, 520, 3);
     this._addPlatform(480, 420, 3);
     this._addPlatform(680, 320, 3);
-    this._addKey(720, 270); // Chave 1
+    this._addKey(720, 270);
 
     this._addEnemy(400, GROUND - 30, 200, 1100, 'tcc_mob');
     this._addEnemy(680, GROUND - 80, 500, 900, 'sono_acumulado');
 
-    // ── Seção 2: Zigzag Aéreo com Chave 2 ─────────────────────────────────
+    // Seção 2: zigzag aéreo com Chave 2
     this._addPlatform(1380, 540, 3);
     this._addPlatform(1520, 440, 3);
     this._addPlatform(1680, 340, 3);
     this._addPlatform(1850, 440, 3);
     this._addPlatform(2020, 320, 4);
-    this._addKey(2080, 270); // Chave 2
+    this._addKey(2080, 270);
 
     this._addEnemy(1550, 380, 1520, 1800, 'sono_acumulado');
     this._addEnemy(1900, GROUND - 30, 1750, 2300, 'tcc_mob');
 
-    // ── Seção 3: Travessia sobre Abismo 3 ─────────────────────────────────
+    // Seção 3: travessia sobre abismo 3
     this._addPlatform(2500, 520, 4);
     this._addPlatform(2800, 420, 4);
     this._addPlatform(3100, 320, 4);
     this._addPlatform(3400, 420, 4);
-    this._addKey(3150, 270); // Chave 3
+    this._addKey(3150, 270);
 
     this._addEnemy(2850, 360, 2800, 3050, 'sono_acumulado');
     this._addEnemy(3450, 360, 3400, 3650, 'sono_acumulado');
 
-    // ── Seção 4: Emboscada antes da Banca ──────────────────────────────────
+    // Seção 4: emboscada antes da banca
     this._addEnemy(4100, GROUND - 30, 4000, 4500, 'tcc_mob');
     this._addEnemy(4300, GROUND - 30, 4150, 4650, 'tcc_mob');
     this._addEnemy(4500, GROUND - 80, 4350, 4800, 'sono_acumulado');
 
-    // Porta final para a Banca
     this.door = new Door(this, 4800, GROUND - 26, this.totalKeys);
   }
 
   _spawnBossArena() {
     this.bossesSpawned = true;
 
-    // Criar teto da sala de aula / banca para conter a arena
     for (let x = 4800; x < WORLD_W; x += TILE) {
       const roof = this.platforms.create(x + TILE / 2, 200, 'stone_platform');
       roof.setDisplaySize(TILE, TILE).refreshBody();
     }
 
-    // Criar parede à direita final
     const rightWall = this.platforms.create(WORLD_W - 16, GROUND - 200, 'stone_platform');
     rightWall.setDisplaySize(32, 400).refreshBody();
 
-    // Spawna os dois chefes
     this.bossTcc = new Enemy(this, 5300, 340, 4900, 5600, 'boss_tcc');
     this.bossBanca = new Enemy(this, 5800, 450, 5700, 5900, 'boss_banca');
-    
+
     this.enemies.add(this.bossTcc, true);
     this.enemies.add(this.bossBanca, true);
 
-    // TCC voa (flutua na sala) — Banca é uma mesa com pessoas, fica no chão
-    // e cai até encontrar piso normalmente (ver TYPES.boss_banca em
-    // Enemy.js, sem isFloating).
     this.bossTcc.body.setAllowGravity(false);
 
-    // Adiciona texto de aviso do Boss
     const txt = this.add.text(this.scale.width / 2, 220, 'APRESENTACAO FINAL DE TCC!', {
       fontFamily: FONT, fontSize: '20px', color: '#e74c3c'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(45);
-    
+
     this.tweens.add({
       targets: txt, scaleX: 1.2, scaleY: 1.2, duration: 600, yoyo: true, repeat: 1,
       onComplete: () => txt.destroy()
     });
 
-    // Mudar música para a música de boss — acelerada e tensa
     audio.startBossMusic();
   }
 
-  // Fecha o portão de retorno — chamado só depois que o jogador já passou
-  // por x=4816 de verdade (ver update()), nunca antes, senão travaria o
-  // jogador do lado de fora, incapaz de entrar na arena.
   _sealArena() {
     this.arenaSealed = true;
     const gate = this.platforms.create(4816, GROUND - 128, 'stone_platform');
     gate.setDisplaySize(32, 256).refreshBody();
 
-    // Reduzir o cooldown de habilidade para 0.5s na luta final (todos os personagens)
     if (this.player) {
       this.player.abilityMaxCooldown = 500;
     }
@@ -414,22 +365,18 @@ export class Level3Scene extends Phaser.Scene {
     let proj;
 
     if (type === 'tcc') {
-      // Projétil TCC: folha cortante vermelha rápida
       proj = this.bossProjectiles.create(boss.x + dirX * 24, boss.y, 'projectile');
       proj.setTint(0xff3333);
       proj.damageAmt = 1;
       proj.splatColor = 0xff3333;
       proj.body.setAllowGravity(false);
       proj.setDepth(15);
-      proj.sourceBoss = boss; // pro dash do Weverton devolver o dano na fonte
+      proj.sourceBoss = boss;
 
       const angle = Phaser.Math.Angle.Between(boss.x, boss.y, this.player.x, this.player.y);
       this.physics.velocityFromAngle(Phaser.Math.RadToDeg(angle), 320, proj.body.velocity);
-      audio.sfx('vomit'); // sfx genérico de disparo
+      audio.sfx('vomit');
     } else {
-      // Projétil Banca: folha de papel arremessada pelos professores
-      // (antes era uma bolha azul de lentidão — não fazia sentido temático
-      // pra uma banca de mesa/professores; papel é o que se atira mesmo).
       proj = this.bossProjectiles.create(boss.x + dirX * 24, boss.y - 10, 'projectile');
       proj.setTint(0xf5f0dc);
       proj.damageAmt = 1;
@@ -440,17 +387,13 @@ export class Level3Scene extends Phaser.Scene {
 
       const angle = Phaser.Math.Angle.Between(boss.x, boss.y, this.player.x, this.player.y);
       this.physics.velocityFromAngle(Phaser.Math.RadToDeg(angle), 220, proj.body.velocity);
-      audio.sfx('throw'); // whoosh do arremesso de papel
+      audio.sfx('throw');
     }
 
-    // Limpeza de segurança
     this.time.delayedCall(4000, () => { if (proj.active) proj.destroy(); });
   }
 
-  // Weverton dashou contra um projétil de chefe: o projétil vira verde, fica
-  // marcado como `reflected` e passa a PERSEGUIR ativamente o boss que atirou
-  // (homing) a cada 50ms até acertá-lo ou sair de cena. Isso garante que o
-  // rebate sempre acerta o chefe, sem depender de mira do jogador.
+  // Projétil refletido pelo dash do Weverton: vira verde e persegue o chefe (homing a cada 50ms).
   _reflectProjectile(proj) {
     const boss = proj.sourceBoss;
     proj.reflected = true;
@@ -458,10 +401,9 @@ export class Level3Scene extends Phaser.Scene {
     proj.body.setAllowGravity(false);
     const homingSpeed = 480;
 
-    // Timer de homing: a cada 50ms redireciona o projétil para a posição atual do boss
     const homingTimer = this.time.addEvent({
       delay: 50,
-      repeat: 60, // máximo de 3s de perseguição (60 × 50ms)
+      repeat: 60,
       callback: () => {
         if (!proj.active || !boss.active) {
           homingTimer.remove();
@@ -472,7 +414,6 @@ export class Level3Scene extends Phaser.Scene {
       }
     });
 
-    // Destrói o timer se o projétil morrer antes do repeat acabar
     proj.once('destroy', () => homingTimer.remove());
     audio.sfx('confirm');
   }
@@ -516,7 +457,6 @@ export class Level3Scene extends Phaser.Scene {
     this.keyGroup.add(new Key(this, x, y), true);
   }
 
-  // Morte de algum dos chefes
   checkBossDeaths() {
     if (this.bossesDefeated || !this.bossesSpawned) return;
 
@@ -528,15 +468,12 @@ export class Level3Scene extends Phaser.Scene {
   _triggerFinalVictorySequence() {
     this.bossesDefeated = true;
 
-    // Destruir quaisquer projéteis restantes
     this.bossProjectiles.clear(true, true);
 
-    // Parar tempestade, vento e trovões
     if (this.rainEmitter) this.rainEmitter.stop();
     this.windForce = 0;
     this._showWindHUD('');
 
-    // Clarear o céu suavemente para um azul dourado usando a nossa imagem overlay
     if (this.victorySky) {
       this.tweens.add({
         targets: this.victorySky,
@@ -545,10 +482,8 @@ export class Level3Scene extends Phaser.Scene {
       });
     }
 
-    // Mudar música para a melodia feliz
     audio.startHappyMusic();
 
-    // Spawna Capelo e Canudo flutuando no meio da arena
     const spawnX = this.player.x + (this.player.x < 5500 ? 120 : -120);
     this.capeloItem = this.physics.add.image(spawnX, 220, 'capelo').setScale(0.08).setDepth(20);
     this.canudoItem = this.physics.add.image(spawnX + 60, 240, 'canudo').setScale(0.08).setDepth(20);
@@ -556,7 +491,6 @@ export class Level3Scene extends Phaser.Scene {
     this.capeloItem.body.setAllowGravity(false);
     this.canudoItem.body.setAllowGravity(false);
 
-    // Animação de descida dos itens de formatura
     this.tweens.add({
       targets: [this.capeloItem, this.canudoItem],
       y: GROUND - 60,
@@ -564,19 +498,17 @@ export class Level3Scene extends Phaser.Scene {
       ease: 'Bounce.easeOut'
     });
 
-    // Overlap para coletar e vencer o jogo!
     const winOverlap = this.physics.add.overlap(this.player, [this.capeloItem, this.canudoItem], () => {
       this.physics.world.removeCollider(winOverlap);
       this.capeloItem.destroy();
       this.canudoItem.destroy();
-      
-      this.player.grabbed = true; // Congela jogador
+
+      this.player.grabbed = true;
       this.player.setVelocity(0, 0);
       this.player.play(`${this.selectedChar}-idle`);
-      
+
       audio.sfx('win');
 
-      // Chuva de confetes
       const conf = this.add.particles(this.player.x, this.player.y - 120, 'confetti', {
         lifespan: 1600, speed: { min: 100, max: 280 },
         scale: { start: 1, end: 0 }, quantity: 12, gravityY: 200,
@@ -590,9 +522,6 @@ export class Level3Scene extends Phaser.Scene {
     });
   }
 
-  // ════════════════════════════════════════════════════════════════════════
-  //  HUD
-  // ════════════════════════════════════════════════════════════════════════
   _buildHUD() {
     this.add.rectangle(0, 0, this.scale.width, 52, 0x000000, 0.4)
       .setOrigin(0, 0).setScrollFactor(0).setDepth(40);
@@ -622,7 +551,6 @@ export class Level3Scene extends Phaser.Scene {
       fontFamily: FONT, fontSize: '9px', color: '#5d6d7e'
     }).setOrigin(1, 1).setScrollFactor(0).setDepth(41);
 
-    // Texto de alerta do vento
     this.windText = this.add.text(this.scale.width / 2, 80, '', {
       fontFamily: FONT, fontSize: '12px', color: '#f1c40f'
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(41).setAlpha(0);
@@ -631,7 +559,7 @@ export class Level3Scene extends Phaser.Scene {
       delay: 100, loop: true, callback: () => {
         this._updateHeartsHUD();
         this._updateAbilityHUD();
-        this.checkBossDeaths(); // Checa se algum boss morreu e atualiza
+        this.checkBossDeaths();
       }
     });
   }
