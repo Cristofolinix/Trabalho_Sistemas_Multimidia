@@ -807,3 +807,40 @@ pra criar atrito/dissonância constante, e o jump scare virou um evento
 ALEATÓRIO (chance a cada passo, não uma posição fixa do compasso) e bem mais
 alto (vol 0.18) que o resto da trilha — muito mais parecido com um susto de
 trilha de terror de verdade.
+
+## ════════════════════════════════════════════════════════════════════════
+## RESOLVIDO NA SÉTIMA SESSÃO (02/07/2026) — NUVENS COLORIDAS + TELA SOBRE
+## ════════════════════════════════════════════════════════════════════════
+
+### 1. Nuvens de tempestade saindo coloridas em vez de escuras
+Bug presente tanto na Fase 2 quanto na Fase 3: `Phaser.Math.Between(0x05070a,
+0x0f131a)` (e o equivalente da Fase 2) sorteia um inteiro entre os dois
+valores tratando `0xRRGGBB` como um número EMPACOTADO só, não canal por
+canal. Um valor "no meio" desses dois tons quase-pretos podia cair em
+QUALQUER combinação de RGB (o byte do meio, G, pode virar um valor bem alto
+mesmo com R e B baixos) — daí nuvens de tempestade saindo verdes/azuis
+vivas em vez de tons escuros. **Lição**: nunca usar `Phaser.Math.Between`
+direto em dois valores hexadecimais 0xRRGGBB pra "sortear uma cor entre
+essas duas" — sempre sortear cada canal (R, G, B) separadamente dentro da
+faixa desejada e montar com `Phaser.Display.Color.GetColor(r,g,b)`. Corrigido
+nas duas fases.
+
+### 2. Tela "Sobre" incompleta (só 2 inimigos da Fase 1, sem Fases 2/3)
+A tela só documentava Ressaca e Trote (Fase 1) num layout de 2 colunas fixo,
+sem nada da Fase 2 (sono, trabalho, cálculo, prova) nem da Fase 3
+(sono_acumulado, tcc_mob, boss_tcc, boss_banca) — 10 inimigos ao todo não
+cabem numa tela 1280×720 de jeito nenhum. Reescrita como coluna única com
+CONTROLES/OBJETIVO/PERIGOS no topo, seguido de uma seção por fase (blurb +
+lista de inimigos com ícone animado + nome + descrição), tudo dentro de um
+`Phaser.Container` com `setMask()` (recorte fixo entre o título e o botão
+"VOLTAR", que ficam fora do container e não rolam). Rolagem via
+`this.input.on('wheel', ...)` e teclas CIMA/BAIXO, com uma barrinha de
+rolagem simples (`scrollThumb`, um retângulo cuja altura/posição são
+recalculadas em `_updateScrollbar()`) e uma dica de texto embaixo
+("▼ role com a roda do mouse ou as setas ▼") que só aparece quando o
+conteúdo excede a área visível (`this.maxScroll > 0`).
+Ícones dos inimigos normalizados por uma altura-alvo fixa (`ICON_H = 46`)
+dividida pela ALTURA DO FRAME de cada spritesheet (não pela altura
+"desenhada" real, que varia e não está registrada por tipo em `Enemy.js`) —
+suficiente pra ficarem visualmente parecidos numa lista, mesmo vindo de
+packs de origens bem diferentes (zumbi CC0, IA da Fase 2/3).

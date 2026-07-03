@@ -1,6 +1,10 @@
 import { FONT } from '../config/theme.js';
 
-// Tela "Sobre" — unifica COMO JOGAR e os INIMIGOS.
+// Tela "Sobre" — unifica COMO JOGAR, OBJETIVO e o bestiário de inimigos das
+// 3 fases. O conteúdo é mais alto que a tela (10 inimigos + descrição de
+// cada fase), então tudo fica dentro de um Container com máscara, e o
+// jogador rola com a roda do mouse ou as setas — só título e botão
+// "VOLTAR" ficam fixos fora da área de rolagem.
 export class AboutScene extends Phaser.Scene {
   constructor() { super({ key: 'AboutScene' }); }
 
@@ -8,78 +12,194 @@ export class AboutScene extends Phaser.Scene {
     const W = this.scale.width, H = this.scale.height;
     this.add.rectangle(W / 2, H / 2, W, H, 0x0d1b2a);
 
-    this.add.text(W / 2, 40, 'SOBRE O JOGO', {
-      fontFamily: FONT, fontSize: '24px', color: '#f1c40f'
-    }).setOrigin(0.5);
+    this.add.text(W / 2, 34, 'SOBRE O JOGO', {
+      fontFamily: FONT, fontSize: '22px', color: '#f1c40f'
+    }).setOrigin(0.5).setDepth(10);
 
-    // Linha divisória vertical
-    const g = this.add.graphics();
-    g.lineStyle(2, 0x2c3e50, 1);
-    g.lineBetween(W / 2, 80, W / 2, H - 80);
+    // ── Área de rolagem (entre o título e o botão voltar) ──────────────────
+    const viewTop = 64, viewBottom = H - 66;
+    const viewH = viewBottom - viewTop;
 
-    // ───────── COLUNA ESQUERDA: COMO JOGAR ─────────
-    const lx = 70;
-    let y = 95;
-    const head = (t, c, col = lx) => {
-      this.add.text(col, y, t, { fontFamily: FONT, fontSize: '14px', color: c }); y += 28;
+    this.scrollY = 0;
+    this.content = this.add.container(0, viewTop);
+
+    const maskG = this.make.graphics();
+    maskG.fillStyle(0xffffff);
+    maskG.fillRect(0, viewTop, W, viewH);
+    this.content.setMask(maskG.createGeometryMask());
+
+    // ── Helpers de layout (empilham verticalmente, cy = cursor local) ──────
+    let cy = 10;
+    const lx = 60;                 // margem esquerda do texto
+    const iconX = lx + 30;         // centro dos ícones de inimigo
+    const textX = lx + 80;         // início do texto ao lado do ícone
+
+    const add = obj => { this.content.add(obj); return obj; };
+
+    const sectionTitle = (t, color) => {
+      cy += 10;
+      add(this.add.text(lx, cy, t, { fontFamily: FONT, fontSize: '15px', color }));
+      cy += 26;
     };
-    const line = (t, col = lx + 16) => {
-      this.add.text(col, y, t, { fontFamily: FONT, fontSize: '10px', color: '#ecf0f1' }); y += 21;
+    const line = (t, color = '#ecf0f1', indent = lx + 16, size = '10px') => {
+      add(this.add.text(indent, cy, t, { fontFamily: FONT, fontSize: size, color }));
+      cy += 18;
+    };
+    const divider = () => {
+      cy += 6;
+      add(this.add.rectangle(W / 2, cy, W - 100, 1, 0x2c3e50));
+      cy += 16;
     };
 
-    head('CONTROLES', '#3498db');
+    // Ícone de inimigo normalizado pela altura do FRAME (não pelo desenho
+    // real, que varia — ver Enemy.js), pra todos saírem com altura visual
+    // parecida na lista, mesmo vindo de spritesheets bem diferentes.
+    const ICON_H = 46;
+    const enemy = (sheet, anim, frameH, name, nameColor, descLines) => {
+      const iconScale = ICON_H / frameH;
+      const rowTop = cy;
+      add(this.add.sprite(iconX, rowTop + ICON_H / 2, sheet, 0).setScale(iconScale).play(anim));
+      add(this.add.text(textX, rowTop, name, { fontFamily: FONT, fontSize: '11px', color: nameColor }));
+      let dy = rowTop + 18;
+      descLines.forEach(l => {
+        add(this.add.text(textX, dy, l, { fontFamily: FONT, fontSize: '9px', color: '#bdc3c7' }));
+        dy += 15;
+      });
+      cy = rowTop + Math.max(ICON_H + 6, 18 + descLines.length * 15 + 6);
+    };
+
+    // ═══════════════════ COMO JOGAR ═══════════════════
+    sectionTitle('CONTROLES', '#3498db');
     line('SETAS / A D ......... mover');
     line('CIMA / W / ESPACO ... pular');
-    line('F ................... habilidade');
-    line('ESC ................. pausar');
-    y += 8;
+    line('F ................... habilidade especial');
+    line('ESC .................. pausar');
 
-    head('OBJETIVO', '#2ecc71');
-    line('Colete as 3 CHAVES da fase.');
-    line('Suba pelas plataformas para');
-    line('alcanca-las e leve ate a PORTA.');
-    y += 8;
+    sectionTitle('OBJETIVO', '#2ecc71');
+    line('Colete as 3 chaves de cada fase e leve');
+    line('o personagem ate a porta de saida.');
 
-    head('PERIGOS', '#e74c3c');
-    line('Inimigos, espinhos e buracos');
-    line('tiram 1 coracao. Ao cair, volta');
-    line('ao ultimo ponto seguro.');
+    sectionTitle('PERIGOS GERAIS', '#e74c3c');
+    line('Inimigos, espinhos e buracos tiram 1');
+    line('coracao. Ao cair ou ser atingido, voce');
+    line('volta ao ultimo ponto seguro em que pisou.');
 
-    // ───────── COLUNA DIREITA: INIMIGOS + TEMA ─────────
-    const rx = W / 2 + 60;
-    y = 95;
-    this.add.text(rx, y, 'INIMIGOS', { fontFamily: FONT, fontSize: '14px', color: '#9b59b6' });
-    y += 40;
+    divider();
 
-    // Ressaca (mesma escala usada no jogo — a antiga (2x) era do sprite anterior,
-    // bem menor; o zumbi CC0 atual é um frame bem maior e ficava gigante aqui)
-    this.add.sprite(rx + 20, y + 14, 'ressaca_walk', 0).setScale(0.55).play('ressaca-walk');
-    this.add.text(rx + 60, y - 4, 'RESSACA', { fontFamily: FONT, fontSize: '12px', color: '#bb88dd' });
-    this.add.text(rx + 60, y + 18, 'Lento e cambaleante.', { fontFamily: FONT, fontSize: '9px', color: '#bdc3c7' });
-    this.add.text(rx + 60, y + 36, 'Anda devagar pelo chao.', { fontFamily: FONT, fontSize: '9px', color: '#bdc3c7' });
-    y += 90;
+    // ═══════════════════ FASE 1 — CALOURADA ═══════════════════
+    sectionTitle('FASE 1 — CALOURADA', '#f39c12');
+    line('A calourada mais concorrida do ano. Sobreviva', '#ecf0f1', lx);
+    line('a ressaca e as galinhas do trote pra chegar', '#ecf0f1', lx);
+    line('inteiro na sua primeira aula.', '#ecf0f1', lx);
+    cy += 6;
 
-    // Trote
-    this.add.sprite(rx + 20, y + 10, 'trote_run', 0).setScale(1.8).play('trote-run');
-    this.add.text(rx + 60, y - 4, 'TROTE', { fontFamily: FONT, fontSize: '12px', color: '#e8a87c' });
-    this.add.text(rx + 60, y + 18, 'Rapido e agitado.', { fontFamily: FONT, fontSize: '9px', color: '#bdc3c7' });
-    this.add.text(rx + 60, y + 36, 'Persegue em alta velocidade.', { fontFamily: FONT, fontSize: '9px', color: '#bdc3c7' });
-    y += 100;
+    enemy('ressaca_walk', 'ressaca-walk', 138, 'RESSACA', '#bb88dd', [
+      'Zumbi lento e cambaleante.',
+      'Anda devagar e cospe vomito a distancia.',
+    ]);
+    enemy('trote_run', 'trote-run', 34, 'TROTE', '#e8a87c', [
+      'Galinha rapida e agressiva.',
+      'Persegue, agarra e joga voce nos espinhos.',
+    ]);
 
-    this.add.text(rx, y, 'A AVENTURA', { fontFamily: FONT, fontSize: '14px', color: '#f39c12' });
-    y += 28;
-    this.add.text(rx, y, 'Sua jornada na universidade', { fontFamily: FONT, fontSize: '9px', color: '#ecf0f1' }); y += 20;
-    this.add.text(rx, y, 'comeca na maior festa do ano.', { fontFamily: FONT, fontSize: '9px', color: '#ecf0f1' }); y += 20;
-    this.add.text(rx, y, 'Encare os perrengues do campus', { fontFamily: FONT, fontSize: '9px', color: '#ecf0f1' }); y += 20;
-    this.add.text(rx, y, 'e siga em frente, calouro!', { fontFamily: FONT, fontSize: '9px', color: '#ecf0f1' });
+    divider();
 
-    // Botão voltar
-    const back = this.add.rectangle(W / 2, H - 42, 220, 44, 0x7f8c8d, 0.9)
-      .setInteractive({ useHandCursor: true });
-    this.add.text(W / 2, H - 42, '< VOLTAR', { fontFamily: FONT, fontSize: '14px', color: '#fff' }).setOrigin(0.5);
+    // ═══════════════════ FASE 2 — O MEIO DO CURSO ═══════════════════
+    sectionTitle('FASE 2 — O MEIO DO CURSO', '#f39c12');
+    line('O sono acumulado bate, os trabalhos em grupo', '#ecf0f1', lx);
+    line('nao andam e as provas parecem nao ter fim.', '#ecf0f1', lx);
+    line('Bem-vindo ao meio do curso.', '#ecf0f1', lx);
+    cy += 6;
+
+    enemy('enemy_sono', 'sono-float', 272, 'SONO', '#8899ee', [
+      'Fantasma flutuante de voo erratico.',
+      'Aplica lentidao profunda ao encostar.',
+    ]);
+    enemy('enemy_trabalho', 'trabalho-run', 379, 'TRABALHO EM GRUPO', '#e8a87c', [
+      'Corre em dupla pelo chao.',
+      'Persegue em alta velocidade quando alerta.',
+    ]);
+    enemy('enemy_calculo', 'calculo-float', 298, 'CALCULO', '#7fd8d8', [
+      'Segue padroes fixos: horizontal, vertical',
+      'ou circular. Nao persegue o jogador.',
+    ]);
+    enemy('enemy_prova', 'prova-float', 430, 'PROVA', '#e74c3c', [
+      'Mini-chefe: flutua e persegue em qualquer',
+      'direcao. Leva varios golpes pra cair.',
+    ]);
+
+    divider();
+
+    // ═══════════════════ FASE 3 — APRESENTACAO TCC ═══════════════════
+    sectionTitle('FASE 3 — APRESENTACAO TCC', '#f39c12');
+    line('Uma tempestade escura anuncia o dia final.', '#ecf0f1', lx);
+    line('Enfrente a Banca Avaliadora e o proprio TCC', '#ecf0f1', lx);
+    line('pra finalmente se formar.', '#ecf0f1', lx);
+    cy += 6;
+
+    enemy('enemy_sono_acumulado', 'sono-acumulado-float', 282, 'SONO ACUMULADO', '#8899ee', [
+      'Versao mais rapida e agressiva do sono.',
+      'Persegue de mais longe e aplica lentidao.',
+    ]);
+    enemy('enemy_tcc_mob', 'tcc-mob-run', 308, 'TCC COMUM', '#f1c40f', [
+      'Corre pelo chao com furia.',
+      'Um dos inimigos mais velozes do jogo.',
+    ]);
+    enemy('boss_tcc', 'boss-tcc-float', 472, 'CHEFE: O TCC', '#e74c3c', [
+      'Livro voador que cospe paginas cortantes.',
+      'Mergulha por instantes — aproveite a brecha',
+      'pra acertar socos e tiros.',
+    ]);
+    enemy('boss_banca', 'boss-banca-float', 454, 'CHEFE: BANCA AVALIADORA', '#e74c3c', [
+      'Mesa de professores presa ao chao.',
+      'Arremessa folhas de papel a distancia.',
+    ]);
+
+    cy += 10;
+    const contentHeight = cy;
+    this.maxScroll = Math.max(0, contentHeight - viewH);
+
+    // ── Rolagem: roda do mouse + setas CIMA/BAIXO ───────────────────────────
+    const scrollBy = delta => {
+      this.scrollY = Phaser.Math.Clamp(this.scrollY + delta, 0, this.maxScroll);
+      this.content.y = viewTop - this.scrollY;
+      this._updateScrollbar();
+    };
+    this.input.on('wheel', (_p, _o, _dx, dy) => scrollBy(dy * 0.5));
+    this.input.keyboard.on('keydown-DOWN', () => scrollBy(40));
+    this.input.keyboard.on('keydown-UP',   () => scrollBy(-40));
+
+    // Barra de rolagem simples (só aparece se o conteúdo não couber inteiro)
+    if (this.maxScroll > 0) {
+      const barX = W - 22;
+      this.add.rectangle(barX, viewTop + viewH / 2, 6, viewH, 0x1a2634).setDepth(9);
+      this.scrollThumb = this.add.rectangle(barX, viewTop, 6, 40, 0x5d8fd6).setDepth(10);
+      this._updateScrollbar();
+
+      this.add.text(W / 2, viewBottom + 20, '▼ role com a roda do mouse ou as setas ▼', {
+        fontFamily: FONT, fontSize: '9px', color: '#5d6d7e'
+      }).setOrigin(0.5);
+    }
+
+    // Botão voltar (fixo, fora da área de rolagem)
+    const back = this.add.rectangle(W / 2, H - 26, 220, 36, 0x7f8c8d, 0.9)
+      .setInteractive({ useHandCursor: true }).setDepth(10);
+    this.add.text(W / 2, H - 26, '< VOLTAR', { fontFamily: FONT, fontSize: '13px', color: '#fff' })
+      .setOrigin(0.5).setDepth(10);
     back.on('pointerover', () => back.setFillStyle(0x95a5a6, 1));
     back.on('pointerout',  () => back.setFillStyle(0x7f8c8d, 0.9));
     back.on('pointerdown', () => this.scene.start('TitleScene'));
     this.input.keyboard.on('keydown-ESC', () => this.scene.start('TitleScene'));
+  }
+
+  _updateScrollbar() {
+    if (!this.scrollThumb) return;
+    const viewTop = 64, viewBottom = this.scale.height - 66;
+    const viewH = viewBottom - viewTop;
+    const trackH = viewH;
+    const thumbH = Math.max(30, trackH * (viewH / (viewH + this.maxScroll)));
+    const t = this.maxScroll > 0 ? this.scrollY / this.maxScroll : 0;
+    this.scrollThumb.height = thumbH;
+    this.scrollThumb.y = viewTop + thumbH / 2 + t * (trackH - thumbH);
   }
 }

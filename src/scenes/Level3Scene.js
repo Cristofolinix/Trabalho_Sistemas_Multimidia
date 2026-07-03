@@ -254,7 +254,15 @@ export class Level3Scene extends Phaser.Scene {
       const cy = Phaser.Math.Between(40, 220);
       const cg = this.add.graphics().setDepth(-35);
       const cr = Phaser.Math.Between(100, 240);
-      cg.fillStyle(Phaser.Math.Between(0x05070a, 0x0f131a), 0.9);
+      // Sorteia cada canal RGB separadamente dentro de uma faixa bem escura.
+      // `Phaser.Math.Between` direto em dois inteiros 0xRRGGBB interpola o
+      // número EMPACOTADO, não cada canal — um valor "no meio" podia cair
+      // em qualquer combinação (ex.: um verde ou azul bem vivo), fazendo
+      // nuvens de tempestade saírem coloridas em vez de escuras/sombrias.
+      const cloudColor = Phaser.Display.Color.GetColor(
+        Phaser.Math.Between(5, 15), Phaser.Math.Between(7, 19), Phaser.Math.Between(10, 26)
+      );
+      cg.fillStyle(cloudColor, 0.9);
       cg.fillEllipse(cx, cy, cr * 2, cr * 0.7);
       cg.fillEllipse(cx - cr * 0.3, cy + 10, cr * 1.2, cr * 0.5);
       this.clouds.push({ g: cg, x: cx, speed: 0.05 + i * 0.006 });

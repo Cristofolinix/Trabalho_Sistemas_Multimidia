@@ -163,7 +163,14 @@ export class Level2Scene extends Phaser.Scene {
       const cy = Phaser.Math.Between(60, 280);
       const cg = this.add.graphics().setDepth(-35);
       const cr = Phaser.Math.Between(80, 200);
-      cg.fillStyle(Phaser.Math.Between(0x111520, 0x1c2535), 0.85);
+      // Sorteia cada canal RGB separadamente (ver Level3Scene.js) — usar
+      // Phaser.Math.Between direto em dois inteiros 0xRRGGBB interpola o
+      // número empacotado, não cada canal, podendo sair uma cor viva no meio
+      // do caminho em vez de um tom escuro intermediário.
+      const cloudColor = Phaser.Display.Color.GetColor(
+        Phaser.Math.Between(17, 28), Phaser.Math.Between(21, 37), Phaser.Math.Between(32, 53)
+      );
+      cg.fillStyle(cloudColor, 0.85);
       cg.fillEllipse(cx, cy, cr * 2, cr * 0.7);
       cg.fillEllipse(cx - cr * 0.4, cy + 15, cr * 1.2, cr * 0.5);
       cg.fillEllipse(cx + cr * 0.4, cy + 20, cr * 1.4, cr * 0.55);
