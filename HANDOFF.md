@@ -682,3 +682,128 @@ outros arquivos no momento do commit. **Se uma sessão futura notar arquivos
 mudando "sozinhos" enquanto trabalha, é sinal de edição concorrente — vale
 checar `git log`/`git status` antes de decidir o que commitar, pra não
 misturar/sobrescrever trabalho em andamento de outra sessão.**
+
+## ════════════════════════════════════════════════════════════════════════
+## RESOLVIDO NA SEXTA SESSÃO (02/07/2026) — BUGS REAIS DA FASE 3
+## ════════════════════════════════════════════════════════════════════════
+A Fase 3 (implementada pela sessão paralela mencionada acima) tinha vários
+bugs reais reportados pelo usuário após jogar. Fase 3 continuava em
+desenvolvimento paralelo durante esta sessão também — sempre checar
+`git status`/`git log` antes de commitar (ver nota acima).
+
+### 1. Sprite do sono_acumulado: "retângulo com 2 fantasmas empilhados"
+Mesma classe de bug do `enemy_trabalho` (sessões anteriores): a imagem real
+(`enemy_sono_acumulado.png`, 900×564) é uma GRADE 2×2 (4 frames de 450×282
+cada), mas `BootScene.js` carregava como tira 4×1 de 225×564 — cada frame
+cortado assim pegava a METADE ESQUERDA de um fantasma da linha de cima
+colada com a metade esquerda do de baixo (exatamente o "retângulo com 2
+fantasmas" reportado). **Lição repetida**: NUNCA assumir a grade de um
+spritesheet gerado por IA só pelas proporções largura/altura — sempre abrir
+a imagem (`Read` no arquivo `.png` funciona direto, é mais confiável que
+adivinhar) antes de configurar `frameWidth`/`frameHeight`. Corrigido pra
+450×282 (2×2) e recalibrado `scale`/`body`/`offset` em `Enemy.js`.
+**Descoberta de metodologia de calibração de hitbox** (importante pra
+qualquer calibração futura): tentar validar visualmente com
+`physics.world.pause()` + leitura de `body.x/y` é uma ARMADILHA — enquanto o
+mundo está pausado, mudanças em `setOffset()`/`setSize()` NÃO se propagam
+pra `body.x/y` (só recalculam no próximo STEP de física de verdade, que
+nunca roda enquanto pausado). Isso invalidou várias rodadas de calibração
+nesta sessão até perceber o problema. O método que funcionou: deixar a
+física RODANDO normalmente, mover o jogador pra longe + `invincible=true`
+(em vez de pausar o mundo), e usar `cam.startFollow(inimigo, true, 1, 1)` +
+`cam.setZoom(n)` (em vez de `cam.centerOn()` manual, que também tem uma
+armadilha de zoom "preguiçoso": chamar `centerOn()` logo depois de
+`setZoom()` no mesmo tick usa o zoom ANTIGO, porque a mudança de zoom
+também só se aplica no próximo frame renderizado).
+
+### 2. Inimigo tcc_mob (livro amarelo) impossível de escapar
+Velocidade de perseguição hardcoded em 190 — quase igual à velocidade MAIS
+LENTA de personagem (Berto, 195) e maior que a do trote/trabalho da Fase 2
+(175). Combinado com o alcance de detecção grande (400px) logo perto do
+spawn da Fase 3, era pior que o bug do "trabalho em grupo" da Fase 2 (que já
+tinha sido corrigido com um período de graça — esse já se aplicava aqui
+também, por herdar de `Enemy._canAggro()`, mas não resolvia sozinho o
+problema de velocidade). Reduzido pra 150, bem abaixo de todos os
+personagens (195-225).
+
+### 3. Bosses (TCC/Banca) aparecendo DEPOIS da porta
+A porta (`Door`) fica em x=4800 mas NÃO tem colisão sólida contra o
+jogador (só overlap) — ou seja, o jogador sempre conseguia atravessá-la
+fisicamente, mesmo sem chaves suficientes. O spawn dos chefes só disparava
+em `player.x > 4850`, 50px DEPOIS da porta — o jogador entrava na sala vazia
+e só depois os chefes apareciam "do nada". Tentar simplesmente adiantar o
+gatilho pra antes da porta esbarrava noutro bug: o "portão" que tranca a
+saída (parede invisível em x=4816) era criado JUNTO com o spawn dos chefes
+— se isso acontecesse enquanto o jogador ainda está À ESQUERDA de x=4816,
+a parede o trancaria do LADO DE FORA da arena, incapaz de entrar (softlock).
+Corrigido separando as duas coisas: `_spawnBossArena()` (revela chefes +
+teto + parede direita, nada que bloqueie a ENTRADA) dispara cedo, em
+`player.x > 4620` (bem antes da porta); o novo método `_sealArena()` (só a
+parede que tranca a saída) dispara depois, em `player.x > 4816`, só quando
+o jogador já passou de verdade.
+
+### 4. Boss Banca voando (deveria ficar no chão) + projétil temático errado
+`boss_banca` tinha `isFloating:true` e um bobbing senoidal vertical
+(`_updateBossBanca`) — pedido do usuário: "é uma mesa com pessoas, deve
+ficar no chão". Removido `isFloating` (agora cai com gravidade normal e
+descansa nas plataformas, igual o `tcc_mob`) e removido o bobbing (métier
+agora só vira pro jogador e atira). Projétil trocado de "bolha azul que
+aplica lentidão" pra uma folha de papel (reusa a textura `projectile`,
+tingida bege/creme) — mais coerente com "professores atirando folhas",
+sem efeito de lentidão associado (não fazia sentido físico pra papel).
+
+### 5. Boss TCC flutuava alto demais pra ser atingido
+`boss_tcc` fazia zigue-zague vertical só entre Y=260-420 (homeY±80),
+inalcançável por socos/tiros que partem da altura do jogador no chão
+(jogador nunca chega perto disso pulando). Adicionado um ciclo de
+"mergulho": a cada ~5s, por ~1.5s, o alvo vertical passa a seguir a altura
+do jogador (`Math.min(player.y - 30, homeY + 200)`, limitado pra não descer
+demais) — cria uma janela real de ataque sem tornar o resto do tempo trivial
+(o chefe ainda passa a maior parte do tempo alto/seguro).
+
+### 6. Habilidades não destruíam projéteis de chefe; dash do Weverton
+Hugo (soco), Alex (tiro) e Berto (onda) só verificavam `this.scene.enemies`
+nos seus checks de dano — agora também verificam `this.scene.bossProjectiles`
+(com optional chaining, já que esse grupo só existe na `Level3Scene`),
+destruindo qualquer projétil que a habilidade atinja.
+Weverton: pedido específico do usuário — dash CONTRA um projétil deve
+DEVOLVÊ-LO na direção do chefe que atirou, causando dano nele. Implementado
+no overlap jogador×`bossProjectiles` em `Level3Scene.js`: se
+`pl._dashActive` e o projétil tem `sourceBoss` vivo, chama
+`_reflectProjectile()` (inverte velocidade rumo ao `sourceBoss`, 30% mais
+rápido, marca `proj.reflected=true`, tinge de verde) em vez do dano normal;
+um overlap novo `bossProjectiles`×`enemies` só processa dano quando
+`proj.reflected` é verdadeiro (evita que o projétil "amigo" machuque o
+próprio chefe que o atirou logo ao nascer, perto demais do corpo dele).
+Cada `spawnBossProjectile()` agora grava `proj.sourceBoss = boss`.
+**Pegadinha de teste**: validar o dash-reflete via física real (`_dashActive`
++ overlap automático) deu falso-negativo por dois motivos combinados —
+"tunelamento" (o dash é muito rápido, 820px/s por só 240ms, podendo pular
+por cima do projétil entre dois frames sem nunca sobrepor) E o throttling de
+aba em segundo plano (rAF quase paralisado quando `document.hidden`,
+poucos frames reais processados durante a espera). A validação que
+funcionou: pegar o `collider`/`overlap` registrado em
+`scene.physics.world.colliders.getActive()` e chamar
+`listener.collideCallback` DIRETAMENTE com os objetos — confirma que a
+LÓGICA está certa, independente da física real conseguir detectar a
+colisão a tempo (que é responsabilidade comprovada do próprio Phaser em uso
+normal, com a aba em primeiro plano).
+
+### 7. Colisão de inimigos flutuantes com plataformas na Fase 3
+Mesmo bug já corrigido na Fase 2 (fantasmas presos na borda de plataformas
+apesar de "voar") — `Level3Scene.js` também tinha
+`collider(this.enemies, this.platforms)` sem filtro. Aplicado o mesmo fix:
+`(enemy) => !enemy.def.isFloating` como `processCallback`, afetando
+`sono_acumulado` e `boss_tcc` (o `boss_banca`, agora sem `isFloating`,
+continua colidindo normalmente — é o comportamento certo pra ele).
+
+### 8. Música da Fase 3 baixa e pouco assustadora
+`startScaryMusic()` tinha volumes comparáveis ou mais baixos que as outras
+trilhas, e o "jump scare" (nota 880Hz) tocava MAIS BAIXO que o resto
+(vol 0.025 vs 0.05), passando despercebido. Reescrita: volumes gerais
+subiram (melodia 0.05→0.09, baixo 0.08→0.14), adicionada uma segunda voz
+quase colada em cada nota da melodia (intervalo de segunda menor, ~6% acima)
+pra criar atrito/dissonância constante, e o jump scare virou um evento
+ALEATÓRIO (chance a cada passo, não uma posição fixa do compasso) e bem mais
+alto (vol 0.18) que o resto da trilha — muito mais parecido com um susto de
+trilha de terror de verdade.

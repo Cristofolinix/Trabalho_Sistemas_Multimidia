@@ -20,6 +20,7 @@ export class Level3Scene extends Phaser.Scene {
     this.keysCollected = 0;
     this.totalKeys = 3;
     this.bossesSpawned = false;
+    this.arenaSealed = false;
     this.bossesDefeated = false;
     
     // Configurações do vento
@@ -61,7 +62,11 @@ export class Level3Scene extends Phaser.Scene {
     this.player.abilityKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
 
     this.physics.add.collider(this.player, this.platforms);
-    this.physics.add.collider(this.enemies, this.platforms);
+    // Inimigos flutuantes (sono_acumulado, boss_tcc — ver Enemy.js
+    // `isFloating`) voam livremente e não devem colidir com plataformas,
+    // senão ficam "presos" na borda ao cruzá-las (mesmo bug já corrigido
+    // na Fase 2 — ver Level2Scene.js).
+    this.physics.add.collider(this.enemies, this.platforms, null, (enemy) => !enemy.def.isFloating);
 
     // Dano ao encostar nos inimigos ordinários
     this.physics.add.overlap(this.player, this.enemies, (pl, en) => {
@@ -78,21 +83,33 @@ export class Level3Scene extends Phaser.Scene {
 
     // Dano dos projéteis dos Chefes
     this.physics.add.overlap(this.player, this.bossProjectiles, (pl, proj) => {
-      if (pl.grabbed || this.bossesDefeated) return;
-      
-      if (proj.isBancaBubble && !pl.invincible) {
-        pl.applySlow(4000);
+      if (pl.grabbed || this.bossesDefeated || !proj.active) return;
+
+      // Weverton dashando CONTRA um projétil: devolve na direção do chefe
+      // que atirou, em vez de acertar o jogador (ver _reflectProjectile).
+      if (pl._dashActive && proj.sourceBoss && proj.sourceBoss.active && !proj.reflected) {
+        this._reflectProjectile(proj);
+        return;
       }
+      if (proj.reflected) return; // já devolvido — só machuca chefes agora
 
       pl.takeDamage(proj.damageAmt);
       pl.setVelocity((pl.x < proj.x ? -1 : 1) * 200, -220);
-      this._splat(proj.x, proj.y, proj.isBancaBubble ? 0x3333ff : 0xff3333);
+      this._splat(proj.x, proj.y, proj.splatColor ?? 0xff3333);
+      proj.destroy();
+    });
+
+    // Projétil devolvido pelo dash do Weverton: acerta o chefe que atirou
+    this.physics.add.overlap(this.bossProjectiles, this.enemies, (proj, en) => {
+      if (!proj.reflected || !en.active || !en.def.isBoss) return;
+      en.kill();
+      this._splat(en.x, en.y, 0x2ecc71);
       proj.destroy();
     });
 
     // Destruir projéteis na colisão com plataformas
     this.physics.add.collider(this.bossProjectiles, this.platforms, (proj) => {
-      this._splat(proj.x, proj.y, proj.isBancaBubble ? 0x3333ff : 0xff3333);
+      this._splat(proj.x, proj.y, proj.splatColor ?? 0xff3333);
       proj.destroy();
     });
 
@@ -163,9 +180,20 @@ export class Level3Scene extends Phaser.Scene {
     // Mecânica de vento
     this._updateWind(time);
 
-    // Trancamento da arena de chefe quando o jogador passa de X = 4850
-    if (!this.bossesSpawned && this.player.x > 4850) {
+    // Revela a arena e os chefes bem ANTES da porta (x=4800), pra dar tempo
+    // do jogador vê-los se aproximando em vez de topar com eles só depois
+    // de já ter atravessado a porta (a porta não tem colisão sólida — ela só
+    // "abre" visualmente, então o jogador sempre conseguia passar direto por
+    // ela mesmo sem chaves suficientes, chegando na arena vazia).
+    if (!this.bossesSpawned && this.player.x > 4620) {
       this._spawnBossArena();
+    }
+    // O "portão" que tranca a saída só fecha DEPOIS que o jogador realmente
+    // passa por ele — se fechasse junto com o spawn dos chefes (que agora
+    // acontece bem antes), travaria o jogador do lado de FORA da arena,
+    // incapaz de entrar.
+    if (this.bossesSpawned && !this.arenaSealed && this.player.x > 4816) {
+      this._sealArena();
     }
 
     // Checar morte por queda
@@ -319,10 +347,6 @@ export class Level3Scene extends Phaser.Scene {
   _spawnBossArena() {
     this.bossesSpawned = true;
 
-    // Criar parede invisível à esquerda para trancar o jogador na arena
-    const gate = this.platforms.create(4816, GROUND - 128, 'stone_platform');
-    gate.setDisplaySize(32, 256).refreshBody();
-
     // Criar teto da sala de aula / banca para conter a arena
     for (let x = 4800; x < WORLD_W; x += TILE) {
       const roof = this.platforms.create(x + TILE / 2, 200, 'stone_platform');
@@ -340,9 +364,10 @@ export class Level3Scene extends Phaser.Scene {
     this.enemies.add(this.bossTcc, true);
     this.enemies.add(this.bossBanca, true);
 
-    // Ajusta a gravidade deles especificamente
+    // TCC voa (flutua na sala) — Banca é uma mesa com pessoas, fica no chão
+    // e cai até encontrar piso normalmente (ver TYPES.boss_banca em
+    // Enemy.js, sem isFloating).
     this.bossTcc.body.setAllowGravity(false);
-    this.bossBanca.body.setAllowGravity(false);
 
     // Adiciona texto de aviso do Boss
     const txt = this.add.text(this.scale.width / 2, 220, 'APRESENTACAO FINAL DE TCC!', {
@@ -358,6 +383,15 @@ export class Level3Scene extends Phaser.Scene {
     audio.sfx('select');
   }
 
+  // Fecha o portão de retorno — chamado só depois que o jogador já passou
+  // por x=4816 de verdade (ver update()), nunca antes, senão travaria o
+  // jogador do lado de fora, incapaz de entrar na arena.
+  _sealArena() {
+    this.arenaSealed = true;
+    const gate = this.platforms.create(4816, GROUND - 128, 'stone_platform');
+    gate.setDisplaySize(32, 256).refreshBody();
+  }
+
   spawnBossProjectile(boss, type) {
     if (this.bossesDefeated || !this.player.isAlive) return;
 
@@ -369,29 +403,47 @@ export class Level3Scene extends Phaser.Scene {
       proj = this.bossProjectiles.create(boss.x + dirX * 24, boss.y, 'projectile');
       proj.setTint(0xff3333);
       proj.damageAmt = 1;
-      proj.isBancaBubble = false;
+      proj.splatColor = 0xff3333;
       proj.body.setAllowGravity(false);
       proj.setDepth(15);
-      
+      proj.sourceBoss = boss; // pro dash do Weverton devolver o dano na fonte
+
       const angle = Phaser.Math.Angle.Between(boss.x, boss.y, this.player.x, this.player.y);
       this.physics.velocityFromAngle(Phaser.Math.RadToDeg(angle), 320, proj.body.velocity);
       audio.sfx('vomit'); // sfx genérico de disparo
     } else {
-      // Projétil Banca: bolha azul que causa lentidão
-      proj = this.bossProjectiles.create(boss.x + dirX * 24, boss.y - 10, 'vomit');
-      proj.setTint(0x3333ff);
+      // Projétil Banca: folha de papel arremessada pelos professores
+      // (antes era uma bolha azul de lentidão — não fazia sentido temático
+      // pra uma banca de mesa/professores; papel é o que se atira mesmo).
+      proj = this.bossProjectiles.create(boss.x + dirX * 24, boss.y - 10, 'projectile');
+      proj.setTint(0xf5f0dc);
       proj.damageAmt = 1;
-      proj.isBancaBubble = true;
+      proj.splatColor = 0xf5f0dc;
       proj.body.setAllowGravity(false);
       proj.setDepth(15);
+      proj.sourceBoss = boss;
 
       const angle = Phaser.Math.Angle.Between(boss.x, boss.y, this.player.x, this.player.y);
       this.physics.velocityFromAngle(Phaser.Math.RadToDeg(angle), 220, proj.body.velocity);
-      audio.sfx('nausea'); // sfx genérico de bolha/estado
+      audio.sfx('throw'); // whoosh do arremesso de papel
     }
 
     // Limpeza de segurança
     this.time.delayedCall(4000, () => { if (proj.active) proj.destroy(); });
+  }
+
+  // Weverton dashou contra um projétil de chefe: inverte o rumo dele de
+  // volta na direção de quem atirou, um pouco mais rápido (sensação de
+  // "rebate com força"), e marca `reflected` pra machucar o CHEFE (e não
+  // mais o jogador) no próximo contato — ver overlaps em create().
+  _reflectProjectile(proj) {
+    const boss = proj.sourceBoss;
+    proj.reflected = true;
+    proj.setTint(0x2ecc71);
+    const curSpeed = Math.hypot(proj.body.velocity.x, proj.body.velocity.y) || 250;
+    const angle = Phaser.Math.Angle.Between(proj.x, proj.y, boss.x, boss.y);
+    this.physics.velocityFromRotation(angle, curSpeed * 1.3, proj.body.velocity);
+    audio.sfx('confirm');
   }
 
   _splat(x, y, tint) {

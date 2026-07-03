@@ -164,30 +164,46 @@ class AudioManager {
     this.musicOn = true;
     this._step = 0;
 
-    // Escala dissonante escura e assustadora
+    // Escala dissonante escura — cada nota da melodia toca JUNTO com uma
+    // segunda voz quase colada (intervalo de segunda menor), criando um
+    // batimento/atrito constante (a base do "desconforto" em trilhas de
+    // terror). Ritmo irregular (silêncios em posições diferentes a cada
+    // volta) em vez de um compasso previsível.
     const melody = [
-      110, 0, 116, 0, 98, 0, 110, 0,
-      147, 0, 155, 0, 131, 0, 880, 0  // 880 é um grito/agudo repentino assustador
+      110, 0, 0, 117, 98, 0, 117, 0,
+      147, 0, 155, 0, 0, 98, 0, 147,
     ];
-    const bass = [55, 55, 0, 55, 49, 49, 0, 49]; // Sub-bass ultra pesado e tenso
-    const stepDur = 0.38;
+    const bass = [55, 55, 0, 58, 55, 0, 49, 0, 55, 0, 58, 55, 49, 0, 55, 0]; // sub-bass pesado, batida irregular
+    const stepDur = 0.40;
 
     const tick = () => {
       if (!this.musicOn) return;
       const i = this._step;
       const m = melody[i % melody.length];
       if (m) {
-        const type = (m === 880) ? 'sawtooth' : 'sine';
-        const vol = (m === 880) ? 0.025 : 0.05;
-        this.tone({ freq: m, dur: stepDur * 0.9, type: type, vol: vol });
+        // Volume bem mais alto que antes (0.05→0.09) + segunda voz
+        // dissonante (m*1.06 ≈ meio-tom acima) mais baixa por trás,
+        // dando o atrito característico de trilha de terror.
+        this.tone({ freq: m, dur: stepDur * 0.95, type: 'sawtooth', vol: 0.09 });
+        this.tone({ freq: m * 1.06, dur: stepDur * 0.95, type: 'sine', vol: 0.045 });
       }
       const b = bass[i % bass.length];
-      if (b) this.tone({ freq: b, dur: stepDur * 0.5, type: 'triangle', vol: 0.08 });
-      
-      // Efeito de vento uivante / ruído a cada 4 passos
-      if (i % 4 === 2) {
-        this.tone({ freq: 400, slideTo: 100, dur: 0.6, type: 'sawtooth', vol: 0.01 });
+      if (b) this.tone({ freq: b, dur: stepDur * 0.6, type: 'triangle', vol: 0.14 });
+
+      // Vento uivante grave, quase contínuo (mais presente que antes)
+      if (i % 3 === 0) {
+        this.tone({ freq: 320, slideTo: 60, dur: 0.9, type: 'sawtooth', vol: 0.03 });
       }
+
+      // "Jump scare" sonoro: estridente, alto e IMPREVISÍVEL (chance
+      // aleatória a cada passo, não um ponto fixo do compasso) — muito mais
+      // audível que a versão anterior (vol 0.025), que ficava mais baixa
+      // que o resto da música e passava despercebida.
+      if (Math.random() < 0.05) {
+        this.tone({ freq: 1400, slideTo: 400, dur: 0.5, type: 'sawtooth', vol: 0.18 });
+        this.tone({ freq: 2000, dur: 0.12, type: 'square', vol: 0.15 });
+      }
+
       this._step++;
     };
     tick();

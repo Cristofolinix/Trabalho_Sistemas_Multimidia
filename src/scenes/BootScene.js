@@ -30,7 +30,11 @@ export class BootScene extends Phaser.Scene {
     this.load.image('stone_platform', 'assets/stone_platform.png');
 
     // ── Assets gerados por IA para a Fase 3 ──────────────────────────────
-    this.load.spritesheet('enemy_sono_acumulado', 'assets/enemy_sono_acumulado.png', { frameWidth: 225, frameHeight: 564 });
+    // sono_acumulado: grade 2×2 (450x282 por frame) — NÃO é tira 4×1. A
+    // config errada (225x564) cortava cada frame no meio da grade, mostrando
+    // metade de um fantasma da linha de cima colada com metade do de baixo
+    // (o "retângulo com dois fantasmas empilhados" reportado pelo usuário).
+    this.load.spritesheet('enemy_sono_acumulado', 'assets/enemy_sono_acumulado.png', { frameWidth: 450, frameHeight: 282 });
     this.load.spritesheet('enemy_tcc_mob',        'assets/enemy_tcc_mob.png',        { frameWidth: 236, frameHeight: 308 });
     this.load.spritesheet('boss_tcc',             'assets/boss_tcc.png',             { frameWidth: 495, frameHeight: 472 });
     this.load.spritesheet('boss_banca',           'assets/boss_banca.png',           { frameWidth: 504, frameHeight: 454 });

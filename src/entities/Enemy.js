@@ -43,9 +43,10 @@ const TYPES = {
     scale: 0.18, body: [300, 330], offset: [56, 50], isFloating: true
   },
   sono_acumulado: {
-    // tira 4×1: frame = 225×564
+    // grade 2×2: frame = 450×282 (ver BootScene.js — NÃO é tira 4×1, isso
+    // causava o bug do "retângulo com 2 fantasmas empilhados")
     sheet: 'enemy_sono_acumulado', anim: 'sono-acumulado-float', speed: 65, damage: 1, hp: 1,
-    scale: 0.10, body: [120, 300], offset: [52, 132], isFloating: true,
+    scale: 0.20, body: [130, 120], offset: [175, 50], isFloating: true,
     appliesSlow: true, isSonoAcumulado: true
   },
   tcc_mob: {
@@ -60,9 +61,11 @@ const TYPES = {
     isBoss: true
   },
   boss_banca: {
-    // grade 2×2: frame = 504×454
+    // grade 2×2: frame = 504×454. Mesa com professores — NÃO voa (sem
+    // isFloating): cai com gravidade normal e fica parada no chão, como
+    // pedido ("é uma mesa com pessoas, deve ficar no chão").
     sheet: 'boss_banca', anim: 'boss-banca-float', speed: 0, damage: 1, hp: 10,
-    scale: 0.28, body: [400, 380], offset: [52, 37], isFloating: true,
+    scale: 0.28, body: [400, 380], offset: [52, 37],
     isBoss: true
   },
 };
@@ -583,7 +586,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       const dir = Math.sign(dx) || 1;
       const groundAhead = this._isGroundAhead(dir);
       if (groundAhead || !this.body.blocked.down) {
-        this.setVelocityX(dir * 190); // Corre muito rápido (190 vs 175)
+        // Velocidade de perseguição abaixo da velocidade de TODOS os
+        // personagens (195-225, ver characters.js) — a versão anterior
+        // (190) ficava quase igual à do mais lento (Berto, 195), tornando
+        // impossível escapar depois de detectado: qualquer hesitação já
+        // custava a margem inteira. 150 dá uma folga real de fuga.
+        this.setVelocityX(dir * 150);
         this.setFlipX(dx < 0);
         if (this.body.blocked.down && p.y < this.y - 30 && Math.random() < 0.03) {
           this.setVelocityY(-380);
@@ -597,18 +605,37 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   _updateBossTcc() {
-    // Chefão TCC: Flutua na arena em zigue-zague
+    // Chefão TCC: flutua em zigue-zague ALTO na maior parte do tempo (fora
+    // do alcance de socos/tiros, que partem da altura do jogador no chão),
+    // mas a cada ~5s "mergulha" por ~1.5s até perto da altura do jogador —
+    // essa é a janela real de ataque corpo-a-corpo/tiro; sem isso ele nunca
+    // desce o suficiente pra ser alcançado.
     const t = this.scene.time.now;
-    
-    // Movimento flutuante em zigue-zague
-    const targetY = this.homeY + Math.sin(t / 800) * 80;
+    const p = this.scene.player;
+
+    if (this._tccNextDive === undefined) this._tccNextDive = t + 3000;
+    if (this._tccDiveUntil === undefined) this._tccDiveUntil = 0;
+    if (this._tccDiving && t > this._tccDiveUntil) this._tccDiving = false;
+    if (!this._tccDiving && t > this._tccNextDive) {
+      this._tccDiving = true;
+      this._tccDiveUntil = t + 1500;
+      this._tccNextDive = t + 5000;
+    }
+
+    let targetY;
+    if (this._tccDiving && p && p.isAlive) {
+      // Desce até perto do jogador, mas nunca mais que ~200px abaixo do
+      // posto original — evita ele "aterrissar" de vez em áreas erradas.
+      targetY = Math.min(p.y - 30, this.homeY + 200);
+    } else {
+      targetY = this.homeY + Math.sin(t / 800) * 80;
+    }
     this.setVelocityY((targetY - this.y) * 4);
 
     // Patrulha horizontal de arena
     this._patrol();
 
     // Atira no jogador
-    const p = this.scene.player;
     if (p && p.isAlive && t > (this.nextShot ?? 0)) {
       const dist = Math.hypot(p.x - this.x, p.y - this.y);
       if (dist < 600) {
@@ -621,11 +648,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   _updateBossBanca() {
-    // Chefão Banca Avaliadora: Flutua levemente na cadeira/mesa (estacionário no X)
+    // Chefão Banca Avaliadora: mesa com professores — fica parada no chão
+    // (gravidade normal, sem isFloating — ver TYPES.boss_banca), sem
+    // flutuar/balançar. Só vira pro jogador e atira folhas de papel.
     const t = this.scene.time.now;
-    
-    const targetY = this.homeY + Math.sin(t / 1200) * 20;
-    this.setVelocityY((targetY - this.y) * 2);
     this.setVelocityX(0);
 
     // Vira para o jogador

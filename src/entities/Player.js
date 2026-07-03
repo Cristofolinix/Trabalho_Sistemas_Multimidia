@@ -185,12 +185,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const hitbox = new Phaser.Geom.Rectangle(cx - 26, cy - 24, 52, 48);
     this.scene.time.addEvent({
       delay: 30, repeat: 6,
-      callback: () => this.scene.enemies?.getChildren().forEach(e => {
-        if (e.active && Phaser.Geom.Intersects.RectangleToRectangle(hitbox, e.getBounds())) {
-          this.scene.cameras.main.shake(120, 0.006);
-          e.kill();
-        }
-      })
+      callback: () => {
+        this.scene.enemies?.getChildren().forEach(e => {
+          if (e.active && Phaser.Geom.Intersects.RectangleToRectangle(hitbox, e.getBounds())) {
+            this.scene.cameras.main.shake(120, 0.006);
+            e.kill();
+          }
+        });
+        // Também destrói projéteis de chefe (Fase 3) que passem pelo soco
+        this.scene.bossProjectiles?.getChildren().forEach(pr => {
+          if (pr.active && Phaser.Geom.Intersects.RectangleToRectangle(hitbox, pr.getBounds())) {
+            pr.destroy();
+          }
+        });
+      }
     });
     this._showAbilityText('SOCO!');
   }
@@ -215,6 +223,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     const stop = () => { trail.destroy(); proj.destroy(); };
     this.scene.physics.add.overlap(proj, this.scene.enemies, (p, e) => { e.kill(); this._sparks(p.x, p.y, dir); stop(); });
+    // Também destrói projéteis de chefe (Fase 3) que o tiro atravessar
+    if (this.scene.bossProjectiles) {
+      this.scene.physics.add.overlap(proj, this.scene.bossProjectiles, (p, pr) => { pr.destroy(); this._sparks(p.x, p.y, dir); stop(); });
+    }
     this.scene.time.delayedCall(1500, stop);
     this._showAbilityText('TIRO!');
   }
@@ -234,9 +246,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const dmg = this.scene.add.circle(this.x, this.y, 10, 0, 0);
     this.scene.tweens.add({
       targets: dmg, radius: 150, duration: 420,
-      onUpdate: () => this.scene.enemies?.getChildren().forEach(e => {
-        if (e.active && Phaser.Math.Distance.Between(this.x, this.y, e.x, e.y) < dmg.radius) e.kill();
-      }),
+      onUpdate: () => {
+        this.scene.enemies?.getChildren().forEach(e => {
+          if (e.active && Phaser.Math.Distance.Between(this.x, this.y, e.x, e.y) < dmg.radius) e.kill();
+        });
+        // Também destrói projéteis de chefe (Fase 3) que a onda alcançar
+        this.scene.bossProjectiles?.getChildren().forEach(pr => {
+          if (pr.active && Phaser.Math.Distance.Between(this.x, this.y, pr.x, pr.y) < dmg.radius) pr.destroy();
+        });
+      },
       onComplete: () => dmg.destroy()
     });
     this._sparks(this.x, this.y, 0);
