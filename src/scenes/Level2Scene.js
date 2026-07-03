@@ -1,16 +1,16 @@
 import { Player } from '../entities/Player.js';
-import { Enemy }  from '../entities/Enemy.js';
-import { Key }    from '../entities/Key.js';
-import { Door }   from '../entities/Door.js';
+import { Enemy } from '../entities/Enemy.js';
+import { Key } from '../entities/Key.js';
+import { Door } from '../entities/Door.js';
 import { CHARACTERS, DEFAULT_CHARACTER } from '../config/characters.js';
 import { FONT } from '../config/theme.js';
 import { audio } from '../audio/AudioManager.js';
 
-const WORLD_W   = 6589;   // +189 vs. original — Seção 3 precisou ficar mais larga (ver _buildLevel)
-const WORLD_H   = 720;
-const GROUND    = 640;
-const TILE      = 32;
-const GRAVITY   = 1000;
+const WORLD_W = 6589;   // +189 vs. original — Seção 3 precisou ficar mais larga (ver _buildLevel)
+const WORLD_H = 720;
+const GROUND = 640;
+const TILE = 32;
+const GRAVITY = 1000;
 
 export class Level2Scene extends Phaser.Scene {
   constructor() { super({ key: 'Level2Scene' }); }
@@ -31,10 +31,10 @@ export class Level2Scene extends Phaser.Scene {
     this.physics.world.gravity.y = GRAVITY;
 
     this.platforms = this.physics.add.staticGroup();
-    this.spikes    = this.physics.add.staticGroup();
-    this.enemies   = this.physics.add.group({ classType: Enemy, runChildUpdate: true });
-    this.keyGroup  = this.physics.add.group({ classType: Key, runChildUpdate: false });
-    this.vomits    = this.physics.add.group();
+    this.spikes = this.physics.add.staticGroup();
+    this.enemies = this.physics.add.group({ classType: Enemy, runChildUpdate: true });
+    this.keyGroup = this.physics.add.group({ classType: Key, runChildUpdate: false });
+    this.vomits = this.physics.add.group();
 
     this._buildLevel();
 
@@ -44,21 +44,28 @@ export class Level2Scene extends Phaser.Scene {
     this.checkpoint = { ...this.spawnPoint };
 
     this.player.cursors = this.input.keyboard.createCursorKeys();
-    this.player.wasd    = this.input.keyboard.addKeys({
-      left:  Phaser.Input.Keyboard.KeyCodes.A,
+    this.player.wasd = this.input.keyboard.addKeys({
+      left: Phaser.Input.Keyboard.KeyCodes.A,
       right: Phaser.Input.Keyboard.KeyCodes.D,
-      up:    Phaser.Input.Keyboard.KeyCodes.W
+      up: Phaser.Input.Keyboard.KeyCodes.W
     });
-    this.player.jumpKey    = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-    this.player.jumpKey2   = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
+    this.player.jumpKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    this.player.jumpKey2 = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
     this.player.abilityKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
 
     this.physics.add.collider(this.player, this.platforms);
-    this.physics.add.collider(this.enemies, this.platforms);
+    // Inimigos flutuantes (sono/cálculo/prova, ver Enemy.js `isFloating`)
+    // voam livremente — não devem colidir com plataformas. Sem este filtro,
+    // um fantasma cruzando a borda de uma plataforma ficava "preso"
+    // (a física empurrava/zerava a velocidade de volta) mesmo com a
+    // gravidade desligada, e a IA tentando corrigir a velocidade todo
+    // frame contra essa colisão causava o mesmo tipo de "piscada" visual
+    // do bug de flicker já corrigido em _updateSono().
+    this.physics.add.collider(this.enemies, this.platforms, null, (enemy) => !enemy.def.isFloating);
 
     this.physics.add.overlap(this.player, this.enemies, (pl, en) => {
       if (pl.grabbed) return;
-      
+
       // Efeito do Sono: lentidão profunda (azul) em vez de enjoo
       if (en.type === 'sono' && !pl.invincible) {
         pl.applySlow(4000);
@@ -109,7 +116,7 @@ export class Level2Scene extends Phaser.Scene {
   update(time, delta) {
     const sx = this.cameras.main.scrollX;
     this.player.update(delta);
-    
+
     // Trovões aleatórios
     if (Math.random() < 0.005) {
       this.sky.fillGradientStyle(0xeeeeee, 0xaaaaaa, 0x334455, 0x334455, 1);
@@ -250,8 +257,8 @@ export class Level2Scene extends Phaser.Scene {
     this._addKey(790, 270);              // Chave 1 no cume
 
     // Dois Trabalhos patrulham o chão e a escada
-    this._addEnemy(300,  GROUND - 30, 100, 700, 'trabalho');
-    this._addEnemy(620,  380, 540, 800, 'trabalho');
+    this._addEnemy(300, GROUND - 30, 100, 700, 'trabalho');
+    this._addEnemy(620, 380, 540, 800, 'trabalho');
 
     // ════════════════════════════════════════════════════════════════════════
     //  SEÇÃO 2 [1100 - 2200]: PLATAFORMAS FLUTUANTES sobre spikes — Cálculo
@@ -269,9 +276,9 @@ export class Level2Scene extends Phaser.Scene {
     this._addPlatform(1700, 560, 3);   // -100 desce
     this._addPlatform(1870, 460, 3);   // +100 sobe
     this._addPlatform(2040, 500, 4);   // plataforma de chegada (largura reduzida
-                                        // de 5 pra 4 tiles — 5 tiles ia até x=2200,
-                                        // sobrepondo a plataforma inicial da Seção 3
-                                        // em x=2180-2200/y=480-512)
+    // de 5 pra 4 tiles — 5 tiles ia até x=2200,
+    // sobrepondo a plataforma inicial da Seção 3
+    // em x=2180-2200/y=480-512)
 
     // Cálculo em cada plataforma
     this._addEnemy(1250, 440, 1200, 1460, 'calculo');   // patrulha horiz
@@ -415,14 +422,14 @@ export class Level2Scene extends Phaser.Scene {
       this.hearts.push(h);
     }
 
-    this.add.text(this.scale.width / 2, 16, 'FASE 2 - O MEIÃO', {
+    this.add.text(this.scale.width / 2, 16, 'FASE 2 - O MEIO DO CURSO', {
       fontFamily: FONT, fontSize: '12px', color: '#ffffff'
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(41);
 
     this.hudAbility = this.add.text(this.scale.width - 16, 18,
       `[F] ${CHARACTERS[this.selectedChar].ability}`, {
-        fontFamily: FONT, fontSize: '10px', color: '#2ecc71', align: 'right'
-      }).setOrigin(1, 0).setScrollFactor(0).setDepth(41);
+      fontFamily: FONT, fontSize: '10px', color: '#2ecc71', align: 'right'
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(41);
 
     this.add.text(this.scale.width - 16, this.scale.height - 14, '[ESC] PAUSA', {
       fontFamily: FONT, fontSize: '9px', color: '#5d6d7e'

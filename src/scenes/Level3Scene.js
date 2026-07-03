@@ -204,6 +204,12 @@ export class Level3Scene extends Phaser.Scene {
     this.sky.fillGradientStyle(0x020406, 0x020406, 0x090f14, 0x090f14, 1);
     this.sky.fillRect(0, 0, W, H);
 
+    // Céu de vitória ensolarado (azul/dourado) - inicialmente invisível (alpha = 0)
+    this.victorySky = this.add.graphics().setScrollFactor(0).setDepth(-31);
+    this.victorySky.fillGradientStyle(0x3498db, 0x3498db, 0xaed6f1, 0xf1c40f, 1);
+    this.victorySky.fillRect(0, 0, W, H);
+    this.victorySky.setAlpha(0);
+
     // Nuvens de tempestade escuras
     this.clouds = [];
     for (let i = 0; i < 14; i++) {
@@ -427,7 +433,7 @@ export class Level3Scene extends Phaser.Scene {
 
   // Morte de algum dos chefes
   checkBossDeaths() {
-    if (this.bossesDefeated) return;
+    if (this.bossesDefeated || !this.bossesSpawned) return;
 
     if ((!this.bossTcc || !this.bossTcc.active) && (!this.bossBanca || !this.bossBanca.active)) {
       this._triggerFinalVictorySequence();
@@ -445,25 +451,14 @@ export class Level3Scene extends Phaser.Scene {
     this.windForce = 0;
     this._showWindHUD('');
 
-    // Clarear o céu suavemente para um azul dourado
-    this.tweens.addCounter({
-      from: 0, to: 100, duration: 2500,
-      onUpdate: (tween) => {
-        this.sky.clear();
-        this.sky.fillGradientStyle(
-          0x34495e, 0x34495e, 
-          Phaser.Display.Color.Interpolate.ColorWithColor(
-            Phaser.Display.Color.ValueToColor(0x090f14), 
-            Phaser.Display.Color.ValueToColor(0xaed6f1), 100, tween.getValue()
-          ).color,
-          Phaser.Display.Color.Interpolate.ColorWithColor(
-            Phaser.Display.Color.ValueToColor(0x090f14), 
-            Phaser.Display.Color.ValueToColor(0xf1c40f), 100, tween.getValue()
-          ).color, 1
-        );
-        this.sky.fillRect(0, 0, this.scale.width, this.scale.height);
-      }
-    });
+    // Clarear o céu suavemente para um azul dourado usando a nossa imagem overlay
+    if (this.victorySky) {
+      this.tweens.add({
+        targets: this.victorySky,
+        alpha: 1,
+        duration: 2500
+      });
+    }
 
     // Mudar música para a melodia feliz
     audio.startHappyMusic();

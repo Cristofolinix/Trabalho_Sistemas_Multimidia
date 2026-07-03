@@ -1,17 +1,17 @@
 import { Player } from '../entities/Player.js';
-import { Enemy }  from '../entities/Enemy.js';
-import { Key }    from '../entities/Key.js';
-import { Door }   from '../entities/Door.js';
+import { Enemy } from '../entities/Enemy.js';
+import { Key } from '../entities/Key.js';
+import { Door } from '../entities/Door.js';
 import { CHARACTERS, DEFAULT_CHARACTER } from '../config/characters.js';
 import { FONT } from '../config/theme.js';
 import { audio } from '../audio/AudioManager.js';
 
 // ── Dimensões do mundo ──────────────────────────────────────────────────
-const WORLD_W   = 6400;
-const WORLD_H   = 720;
-const GROUND    = 640;   // Y do topo do chão
-const TILE      = 32;
-const GRAVITY   = 1000;
+const WORLD_W = 6400;
+const WORLD_H = 720;
+const GROUND = 640;   // Y do topo do chão
+const TILE = 32;
+const GRAVITY = 1000;
 
 export class Level1Scene extends Phaser.Scene {
   constructor() { super({ key: 'Level1Scene' }); }
@@ -39,10 +39,10 @@ export class Level1Scene extends Phaser.Scene {
 
     // ── Grupos ───────────────────────────────────────────────────────────
     this.platforms = this.physics.add.staticGroup();
-    this.spikes    = this.physics.add.staticGroup();
-    this.enemies   = this.physics.add.group({ classType: Enemy, runChildUpdate: true });
-    this.keyGroup  = this.physics.add.group({ classType: Key, runChildUpdate: false });
-    this.vomits    = this.physics.add.group();   // projéteis de vômito da Ressaca
+    this.spikes = this.physics.add.staticGroup();
+    this.enemies = this.physics.add.group({ classType: Enemy, runChildUpdate: true });
+    this.keyGroup = this.physics.add.group({ classType: Key, runChildUpdate: false });
+    this.vomits = this.physics.add.group();   // projéteis de vômito da Ressaca
 
     this._buildLevel();
 
@@ -53,13 +53,13 @@ export class Level1Scene extends Phaser.Scene {
     this.checkpoint = { ...this.spawnPoint };
 
     this.player.cursors = this.input.keyboard.createCursorKeys();
-    this.player.wasd    = this.input.keyboard.addKeys({
-      left:  Phaser.Input.Keyboard.KeyCodes.A,
+    this.player.wasd = this.input.keyboard.addKeys({
+      left: Phaser.Input.Keyboard.KeyCodes.A,
       right: Phaser.Input.Keyboard.KeyCodes.D,
-      up:    Phaser.Input.Keyboard.KeyCodes.W
+      up: Phaser.Input.Keyboard.KeyCodes.W
     });
-    this.player.jumpKey    = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-    this.player.jumpKey2   = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
+    this.player.jumpKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    this.player.jumpKey2 = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
     this.player.abilityKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
 
     // ── Colisões ──────────────────────────────────────────────────────────
@@ -140,7 +140,7 @@ export class Level1Scene extends Phaser.Scene {
   update(time, delta) {
     // Paralaxe (cada camada move numa velocidade diferente)
     const sx = this.cameras.main.scrollX;
-    this.bg.tilePositionX    = sx * 0.10;
+    this.bg.tilePositionX = sx * 0.10;
     this.cityBg.tilePositionX = sx * 0.30;
     this.player.update(delta);
 
@@ -200,24 +200,24 @@ export class Level1Scene extends Phaser.Scene {
 
     // ── Props no mundo (rolam junto com a fase) ──────────────────────────
     // Faixas de boas-vindas
-    [[760, 'BEM-VINDOS, CALOUROS!'], [3500, 'CALOURADA 2026'],
-     [5600, 'FESTA NO CAMPUS!']].forEach(([x, txt]) => this._banner(x, 150, txt));
+    [[760, 'BEM-VINDOS, CALOUROS!'], [3500, 'CALOURADA'],
+    [5600, 'FESTA NO CAMPUS!']].forEach(([x, txt]) => this._banner(x, 150, txt));
 
     // Caixas de som (palco da festa) ao longo do chão
     [240, 2050, 4050, 6000].forEach(x => this._speaker(x));
 
     // Balões presos em plataformas
     [[470, 480], [2000, 400], [3278, 245],
-     [4738, 315], [5900, 560]].forEach(([x, y]) => this._balloon(x, y));
+    [4738, 315], [5900, 560]].forEach(([x, y]) => this._balloon(x, y));
   }
 
   // Canhões de luz coloridos varrendo o céu (fixos na tela)
   _spotlights(W, H) {
     const beams = [
       { x: W * 0.15, color: 0xff3a7a, from: -28, to: 18 },
-      { x: W * 0.40, color: 0x3a9bff, from: 22,  to: -20 },
+      { x: W * 0.40, color: 0x3a9bff, from: 22, to: -20 },
       { x: W * 0.62, color: 0x6aff8a, from: -18, to: 26 },
-      { x: W * 0.85, color: 0xffd24a, from: 20,  to: -24 },
+      { x: W * 0.85, color: 0xffd24a, from: 20, to: -24 },
     ];
     beams.forEach((b, i) => {
       const g = this.add.graphics({ x: b.x, y: H + 10 })
@@ -270,11 +270,11 @@ export class Level1Scene extends Phaser.Scene {
     g.fillRect(x - w / 2 + 3, top + 3, w - 6, h - 6);
     // alto-falante grande (woofer)
     g.fillStyle(0x111118, 1); g.fillCircle(x, top + 56, 15);
-    g.fillStyle(0x3a3a48, 1);  g.fillCircle(x, top + 56, 9);
-    g.fillStyle(0x111118, 1);  g.fillCircle(x, top + 56, 3);
+    g.fillStyle(0x3a3a48, 1); g.fillCircle(x, top + 56, 9);
+    g.fillStyle(0x111118, 1); g.fillCircle(x, top + 56, 3);
     // tweeter pequeno
     g.fillStyle(0x111118, 1); g.fillCircle(x, top + 22, 7);
-    g.fillStyle(0x3a3a48, 1);  g.fillCircle(x, top + 22, 4);
+    g.fillStyle(0x3a3a48, 1); g.fillCircle(x, top + 22, 4);
     // luzinha de status
     g.fillStyle(0x6aff8a, 1); g.fillCircle(x + w / 2 - 6, top + 8, 2);
   }
@@ -346,14 +346,14 @@ export class Level1Scene extends Phaser.Scene {
     this._addKey(4768, 355);
 
     // ── Inimigos ─────────────────────────────────────────────────────────
-    this._addEnemy(350,  GROUND - 30, 160,  640,  'ressaca');
-    this._addEnemy(1050, GROUND - 30, 900,  1250, 'trote');
-    this._addEnemy(1965, 440,         1935, 2000, 'ressaca');   // sobre plataforma HB2
+    this._addEnemy(350, GROUND - 30, 160, 640, 'ressaca');
+    this._addEnemy(1050, GROUND - 30, 900, 1250, 'trote');
+    this._addEnemy(1965, 440, 1935, 2000, 'ressaca');   // sobre plataforma HB2
     this._addEnemy(1800, GROUND - 30, 1620, 2100, 'trote');
-    this._addEnemy(3105, 390,         3075, 3140, 'ressaca');   // guarda da Chave 2 (HC2)
+    this._addEnemy(3105, 390, 3075, 3140, 'ressaca');   // guarda da Chave 2 (HC2)
     this._addEnemy(3000, GROUND - 30, 2820, 3200, 'trote');
     this._addEnemy(3500, GROUND - 30, 3300, 3650, 'ressaca');
-    this._addEnemy(4545, 440,         4515, 4580, 'trote');     // sobre plataforma HD3
+    this._addEnemy(4545, 440, 4515, 4580, 'trote');     // sobre plataforma HD3
     this._addEnemy(4200, GROUND - 30, 3990, 4360, 'ressaca');
     this._addEnemy(4800, GROUND - 30, 4620, 4960, 'trote');
     this._addEnemy(5450, GROUND - 30, 5300, 5560, 'ressaca');
@@ -441,8 +441,8 @@ export class Level1Scene extends Phaser.Scene {
     // Habilidade (direita)
     this.hudAbility = this.add.text(this.scale.width - 16, 18,
       `[F] ${CHARACTERS[this.selectedChar].ability}`, {
-        fontFamily: FONT, fontSize: '10px', color: '#2ecc71', align: 'right'
-      }).setOrigin(1, 0).setScrollFactor(0).setDepth(41);
+      fontFamily: FONT, fontSize: '10px', color: '#2ecc71', align: 'right'
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(41);
 
     // Dica de pausa
     this.add.text(this.scale.width - 16, this.scale.height - 14, '[ESC] PAUSA', {
