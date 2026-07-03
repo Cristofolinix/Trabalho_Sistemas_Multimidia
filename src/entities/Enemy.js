@@ -419,7 +419,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       const vx = Math.cos(this._sonoWanderAngle) * this.speed;
       const vy = Math.sin(this._sonoWanderAngle) * this.speed * 0.6;
       this.setVelocity(vx, vy);
-      this.setFlipX(vx < 0);
+      // Vira o sprite pelo lado onde o JOGADOR está (dx), não pelo sinal de
+      // vx: quando o jogador fica quase direto acima/abaixo do fantasma
+      // (dx perto de 0), o ângulo de perseguição fica perto da vertical e
+      // cos(ângulo) — logo vx — oscila de sinal a cada frame só por
+      // arredondamento, fazendo o sprite "piscar" de lado sem se mover de
+      // verdade (mesma causa-raiz do flicker parado, corrigido acima —
+      // aqui é o modo perseguição que também sofria disso). Uma pequena
+      // zona-morta em dx evita repetir o problema exatamente quando dx
+      // cruza 0.
+      const dxToPlayer = p.x - this.x;
+      if (Math.abs(dxToPlayer) > 6) this.setFlipX(dxToPlayer < 0);
 
       if (this.x < this.leftX || this.x > this.rightX) {
         this._sonoWanderAngle = Math.PI - this._sonoWanderAngle;
