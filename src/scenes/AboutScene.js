@@ -88,8 +88,8 @@ export class AboutScene extends Phaser.Scene {
 
     // ═══════════════════ FASE 1 — CALOURADA ═══════════════════
     sectionTitle('FASE 1 — CALOURADA', '#f39c12');
-    line('A calourada mais concorrida do ano. Sobreviva', '#ecf0f1', lx);
-    line('a ressaca e as galinhas do trote pra chegar', '#ecf0f1', lx);
+    line('A melhor fase do curso. Sobreviva', '#ecf0f1', lx);
+    line('a ressaca e as galinhas que aplicam o trote pra chegar', '#ecf0f1', lx);
     line('inteiro na sua primeira aula.', '#ecf0f1', lx);
     cy += 6;
 
@@ -167,7 +167,7 @@ export class AboutScene extends Phaser.Scene {
     };
     this.input.on('wheel', (_p, _o, _dx, dy) => scrollBy(dy * 0.5));
     this.input.keyboard.on('keydown-DOWN', () => scrollBy(40));
-    this.input.keyboard.on('keydown-UP',   () => scrollBy(-40));
+    this.input.keyboard.on('keydown-UP', () => scrollBy(-40));
 
     // Barra de rolagem simples (só aparece se o conteúdo não couber inteiro)
     if (this.maxScroll > 0) {
@@ -187,7 +187,7 @@ export class AboutScene extends Phaser.Scene {
     this.add.text(W / 2, H - 26, '< VOLTAR', { fontFamily: FONT, fontSize: '13px', color: '#fff' })
       .setOrigin(0.5).setDepth(10);
     back.on('pointerover', () => back.setFillStyle(0x95a5a6, 1));
-    back.on('pointerout',  () => back.setFillStyle(0x7f8c8d, 0.9));
+    back.on('pointerout', () => back.setFillStyle(0x7f8c8d, 0.9));
     back.on('pointerdown', () => this.scene.start('TitleScene'));
     this.input.keyboard.on('keydown-ESC', () => this.scene.start('TitleScene'));
   }
