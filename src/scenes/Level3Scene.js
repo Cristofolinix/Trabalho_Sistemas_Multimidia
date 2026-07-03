@@ -109,6 +109,15 @@ export class Level3Scene extends Phaser.Scene {
       if (this.keysCollected >= this.totalKeys && this.door) this.door.open();
     });
 
+    // Porta final para a Banca
+    this.physics.add.overlap(this.player, this.door, () => {
+      if (this.door && this.door.tryEnter(this.keysCollected)) {
+        audio.sfx('door');
+        this.door.destroy();
+        this.door = null;
+      }
+    });
+
     this.cameras.main.setBounds(0, 0, WORLD_W, WORLD_H);
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
 
@@ -305,13 +314,6 @@ export class Level3Scene extends Phaser.Scene {
 
     // Porta final para a Banca
     this.door = new Door(this, 4800, GROUND - 26, this.totalKeys);
-    this.physics.add.overlap(this.player, this.door, () => {
-      if (this.door.tryEnter(this.keysCollected)) {
-        audio.sfx('door');
-        this.door.destroy();
-        this.door = null;
-      }
-    });
   }
 
   _spawnBossArena() {
