@@ -6,6 +6,15 @@ import { audio } from '../audio/AudioManager.js';
 export class MenuScene extends Phaser.Scene {
   constructor() { super({ key: 'MenuScene' }); }
 
+  init(data) {
+    // Para onde ir após escolher o personagem. O fluxo normal (Título →
+    // Menu) não passa nada e cai na Fase 1; o seletor de fase do Modo Dev
+    // (CreditsScene) passa a fase escolhida aqui, pra sempre abrir esta
+    // tela de seleção antes de entrar na fase — sem isto, o Modo Dev
+    // entrava direto como Hugo, sem deixar escolher o personagem.
+    this.targetScene = data?.targetScene || 'Level1Scene';
+  }
+
   create() {
     const W = this.scale.width, H = this.scale.height;
 
@@ -99,6 +108,6 @@ export class MenuScene extends Phaser.Scene {
     const chosen = this.charKeys[this.selectedIndex];
     audio.sfx('confirm');
     this.cameras.main.flash(220, 255, 255, 255);
-    this.time.delayedCall(140, () => this.scene.start('Level1Scene', { char: chosen }));
+    this.time.delayedCall(140, () => this.scene.start(this.targetScene, { char: chosen }));
   }
 }

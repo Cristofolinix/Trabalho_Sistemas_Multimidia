@@ -504,7 +504,7 @@ export class Level1Scene extends Phaser.Scene {
     this.cameras.main.shake(400, 0.02);
     this.cameras.main.fade(700, 0, 0, 0);
     this.time.delayedCall(800, () => {
-      this.scene.start('GameOverScene', { char: this.selectedChar });
+      this.scene.start('GameOverScene', { char: this.selectedChar, phase: 'Level1Scene' });
     });
   }
 }

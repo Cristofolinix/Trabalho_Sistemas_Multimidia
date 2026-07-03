@@ -4,6 +4,7 @@ import { TitleScene      } from './scenes/TitleScene.js';
 import { MenuScene       } from './scenes/MenuScene.js';
 import { Level1Scene     } from './scenes/Level1Scene.js';
 import { Level2Scene     } from './scenes/Level2Scene.js';
+import { Level3Scene     } from './scenes/Level3Scene.js';
 import { WinScene        } from './scenes/WinScene.js';
 import { GameOverScene   } from './scenes/GameOverScene.js';
 import { AboutScene      } from './scenes/AboutScene.js';
@@ -40,6 +41,7 @@ const config = {
     MenuScene,       // seleção de personagem
     Level1Scene,     // fase 1
     Level2Scene,     // fase 2
+    Level3Scene,     // fase 3
     WinScene,        // vitória
     GameOverScene,   // derrota (vidas zeradas)
     AboutScene,      // sobre (como jogar + inimigos)
@@ -48,4 +50,5 @@ const config = {
   ]
 };
 
-new Phaser.Game(config);
+const __game = new Phaser.Game(config);
+if (import.meta.env.DEV) window.__game = __game;

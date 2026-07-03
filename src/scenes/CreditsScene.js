@@ -52,10 +52,10 @@ export class CreditsScene extends Phaser.Scene {
       fontFamily: FONT, fontSize: '9px', color: '#e67e22'
     }).setOrigin(0.5);
 
-    const defaultChar = Object.keys(CHARACTERS)[0];
     const phases = [
       { label: 'FASE 1', scene: 'Level1Scene' },
       { label: 'FASE 2', scene: 'Level2Scene' },
+      { label: 'FASE 3', scene: 'Level3Scene' },
     ];
     phases.forEach((ph, i) => {
       const bx = W / 2 + (i - (phases.length - 1) / 2) * 160;
@@ -67,7 +67,7 @@ export class CreditsScene extends Phaser.Scene {
       }).setOrigin(0.5);
       btn.on('pointerover',  () => btn.setFillStyle(0x2a5a8c, 1));
       btn.on('pointerout',   () => btn.setFillStyle(0x1a3a5c, 1));
-      btn.on('pointerdown',  () => this.scene.start(ph.scene, { char: defaultChar }));
+      btn.on('pointerdown',  () => this.scene.start('MenuScene', { targetScene: ph.scene }));
     });
 
     const back = this.add.rectangle(W / 2, H - 30, 220, 36, 0x7f8c8d, 0.9)

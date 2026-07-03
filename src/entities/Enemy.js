@@ -42,6 +42,29 @@ const TYPES = {
     sheet: 'enemy_prova', anim: 'prova-float', speed: 75, damage: 2, hp: 4,
     scale: 0.18, body: [300, 330], offset: [56, 50], isFloating: true
   },
+  sono_acumulado: {
+    // tira 4×1: frame = 225×564
+    sheet: 'enemy_sono_acumulado', anim: 'sono-acumulado-float', speed: 65, damage: 1, hp: 1,
+    scale: 0.10, body: [120, 300], offset: [52, 132], isFloating: true,
+    appliesSlow: true, isSonoAcumulado: true
+  },
+  tcc_mob: {
+    // tira 4×1: frame = 236×308
+    sheet: 'enemy_tcc_mob', anim: 'tcc-mob-run', speed: 85, damage: 1, hp: 2,
+    scale: 0.22, body: [160, 240], offset: [38, 34]
+  },
+  boss_tcc: {
+    // grade 2×2: frame = 495×472
+    sheet: 'boss_tcc', anim: 'boss-tcc-float', speed: 80, damage: 1, hp: 10,
+    scale: 0.28, body: [350, 380], offset: [72, 46], isFloating: true,
+    isBoss: true
+  },
+  boss_banca: {
+    // grade 2×2: frame = 504×454
+    sheet: 'boss_banca', anim: 'boss-banca-float', speed: 0, damage: 1, hp: 10,
+    scale: 0.28, body: [400, 380], offset: [52, 37], isFloating: true,
+    isBoss: true
+  },
 };
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
@@ -94,10 +117,34 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     if (def.anim) this.play(def.anim);
     this.setVelocityX(this.speed);
+
+    // Período de graça: nos primeiros instantes após o inimigo aparecer
+    // (= início da fase, pra quem já nasce em cena) ele não pode detectar/
+    // perseguir o jogador. Sem isto, um inimigo que nasce perto do ponto de
+    // spawn do jogador (ex.: os dois "trabalho em grupo" logo na entrada da
+    // Fase 2) já começa perseguindo no frame 1, sem o jogador ter tido
+    // qualquer chance de reagir ou se afastar.
+    //
+    // IMPORTANTE: não dá pra ler `scene.time.now` aqui no construtor — a
+    // cena chama create() (que cria os inimigos) ANTES do primeiro
+    // Clock.preUpdate() da própria cena nesse frame, então `scene.time.now`
+    // ainda está com um valor "não sincronizado" (0 ou o de antes da troca
+    // de cena). No frame seguinte ele pula direto pro tempo absoluto real
+    // do jogo (já bem maior que 1200), fazendo o período de graça terminar
+    // instantaneamente. Por isso o baseline só é capturado no primeiro
+    // update() (ver abaixo), quando o Clock já sincronizou de verdade.
+    this.spawnAt = null;
+  }
+
+  // Só pode perseguir/alertar depois do período de graça pós-spawn.
+  _canAggro() {
+    return (this.scene.time.now - this.spawnAt) > 1200;
   }
 
   update() {
     if (!this.active) return;
+
+    if (this.spawnAt === null) this.spawnAt = this.scene.time.now;
 
     // Inimigos flutuantes (sono/cálculo/prova) tem a gravidade desligada no
     // construtor, mas `group.add()` (chamado logo depois, em _addEnemy) a
@@ -118,6 +165,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     else if (this.type === 'trabalho') this._updateTrabalho();
     else if (this.type === 'calculo') this._updateCalculo();
     else if (this.type === 'prova') this._updateProva();
+    else if (this.type === 'sono_acumulado') this._updateSonoAcumulado();
+    else if (this.type === 'tcc_mob') this._updateTccMob();
+    else if (this.type === 'boss_tcc') this._updateBossTcc();
+    else if (this.type === 'boss_banca') this._updateBossBanca();
     else                       this._updateRessaca();
   }
 
@@ -178,7 +229,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       // Patrulhando: se o jogador chega perto (e no mesmo nível), começa a caça
       case 'patrol': {
         this._patrol();
-        if (p && p.isAlive && now > this.grabReadyAt) {
+        if (p && p.isAlive && now > this.grabReadyAt && this._canAggro()) {
           const dx = p.x - this.x, dy = p.y - this.y;
           if (Math.abs(dx) < this.def.detectRange && Math.abs(dy) < 90) {
             this.state = 'chase';
@@ -347,61 +398,73 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   //  INIMIGOS FASE 2
   // ════════════════════════════════════════════════════════════════════════
   _updateSono() {
-    // Fantasma: movimento errante 2D (não em linha reta), voando (sem gravidade
-    // — ver update()). Usa um ângulo que vai mudando lentamente de forma
-    // senoidal, e é "puxado" aos poucos em direção ao jogador quando perto.
-    const t = this.scene.time.now / 1200;
-    this._sonoWanderAngle += 0.018 * Math.sin(t); // deriva o ângulo vagarosamente
-
     const p = this.scene.player;
     const dist = (p && p.isAlive)
       ? Math.hypot(p.x - this.x, p.y - this.y) : Infinity;
-    const chasing = dist < 350;
+    const chasing = this._canAggro() && dist < 350;
 
     if (chasing) {
-      // Persegue: inclina o ângulo em direção ao jogador, mas nunca perfeitamente
-      // — mais devagar que o trabalho em grupo (this.speed já é menor, 50 vs 75).
+      // Persegue: ângulo livre (2D), "puxado" aos poucos em direção ao
+      // jogador mas nunca perfeitamente — mais devagar que o trabalho em
+      // grupo (this.speed já é menor, 50 vs 75). O alcance vertical aqui é
+      // maior (220) porque precisa poder ir atrás do jogador entre
+      // plataformas vizinhas.
+      const t = this.scene.time.now / 1200;
+      this._sonoWanderAngle += 0.018 * Math.sin(t); // deriva o ângulo vagarosamente
       const targetAngle = Math.atan2(p.y - this.y, p.x - this.x);
       const diff = targetAngle - this._sonoWanderAngle;
       this._sonoWanderAngle += Math.sign(Math.sin(diff)) * 0.06;
+
+      const vx = Math.cos(this._sonoWanderAngle) * this.speed;
+      const vy = Math.sin(this._sonoWanderAngle) * this.speed * 0.6;
+      this.setVelocity(vx, vy);
+      this.setFlipX(vx < 0);
+
+      if (this.x < this.leftX || this.x > this.rightX) {
+        this._sonoWanderAngle = Math.PI - this._sonoWanderAngle;
+      }
+      if (this.y < this.homeY - 220) this._sonoWanderAngle = Math.abs(this._sonoWanderAngle) % (Math.PI * 2);
+      if (this.y > this.homeY + 220) this._sonoWanderAngle = -Math.abs(this._sonoWanderAngle);
+      return;
     }
 
-    // Aplica velocidade no ângulo atual
-    const vx = Math.cos(this._sonoWanderAngle) * this.speed;
-    const vy = Math.sin(this._sonoWanderAngle) * this.speed * 0.6;
+    // Parado (não perseguindo): deriva horizontal + balanço vertical
+    // DESACOPLADOS, em vez de um ângulo livre girando 360°.
+    // Motivo: com o ângulo livre, de vez em quando ele apontava quase
+    // reto pra cima/baixo — e como o alcance vertical parado é bem
+    // pequeno (20px, ver nota abaixo sobre o porquê), o fantasma batia
+    // nos dois limites verticais em frações de segundo, obrigando a
+    // correção a inverter o sinal o tempo todo. Isso não mexe na
+    // velocidade horizontal em si (cos(ângulo) é igual pra ângulo e
+    // -ângulo), mas quando o ângulo fica perto de ±90°, vx fica bem perto
+    // de zero e seu SINAL some/inverte por causa de arredondamento —
+    // e `setFlipX(vx < 0)` virava o sprite de lado a cada frame,
+    // parecendo "piscar" de um lado pro outro sem se mover de verdade.
+    // Desacoplado assim, vx nunca chega perto de zero (fica sempre em
+    // ±50% da velocidade) e o balanço vertical é uma senoide pura, sem
+    // limite artificial pra "bater" e reverter de repente.
+    if (this._sonoIdleDir === undefined) this._sonoIdleDir = this.flipX ? -1 : 1;
+    const vx = this._sonoIdleDir * this.speed * 0.5;
+    const vy = Math.sin(this.scene.time.now / 900) * this.speed * 0.35;
     this.setVelocity(vx, vy);
     this.setFlipX(vx < 0);
+    this._sonoWanderAngle = Math.atan2(vy, vx); // mantém coerente pra quando começar a perseguir
 
-    // Limites de patrulha: inverte ângulo horizontal se sair da área
-    if (this.x < this.leftX || this.x > this.rightX) {
-      this._sonoWanderAngle = Math.PI - this._sonoWanderAngle;
-    }
-    // Limites verticais RELATIVOS ao posto do fantasma (homeY) — sem isto ele
-    // "deriva" livre pela tela toda (a versão antiga usava os limites do MUNDO
-    // inteiro) e podia acabar lá embaixo, dentro da área de espinhos do abismo,
-    // parecendo ter "caído" mesmo estando voando/sem gravidade. Enquanto
-    // perseguindo, o alcance é maior (precisa poder ir atrás do jogador entre
-    // plataformas vizinhas); parado, fica bem perto do posto.
-    //
-    // O alcance parado (20) é menor que a folga mínima usada no level design
-    // entre o posto do fantasma e a plataforma que ele guarda (60px na Seção
-    // 3 do abismo aéreo, 80px nos que ficam sobre o chão — ver Level2Scene.js).
-    // Precisa ser bem pequeno porque o SPRITE do sono é bem maior que a
-    // hitbox física dele: metade da altura do frame já são ~38px (frame
-    // 272px alto × escala 0.28 ÷ 2) — ou seja, mesmo com a hitbox nunca
-    // saindo do lugar, o desenho do fantasma (a "cauda" fica pendurada bem
-    // abaixo do corpo) já consome quase toda a folga de 60px sozinho.
-    // Medido ao vivo: com alcance 35 a cauda ainda entrava ~14px na
-    // plataforma; com 20, fica sempre por cima (testado com
-    // `sprite.getBounds()`, que reflete o desenho inteiro, não só a hitbox).
-    const vRange = chasing ? 220 : 20;
-    if (this.y < this.homeY - vRange) this._sonoWanderAngle = Math.abs(this._sonoWanderAngle) % (Math.PI * 2);
-    if (this.y > this.homeY + vRange) this._sonoWanderAngle = -Math.abs(this._sonoWanderAngle);
+    if (this.x <= this.leftX) { this._sonoIdleDir = 1;  this.setFlipX(false); }
+    else if (this.x >= this.rightX) { this._sonoIdleDir = -1; this.setFlipX(true); }
+
+    // Alcance vertical parado bem pequeno (só a senoide, ±35% da velocidade
+    // já garante isso) — a folga mínima entre o posto do fantasma e a
+    // plataforma que ele guarda é só 60px (Seção 3 do abismo aéreo), e o
+    // SPRITE do sono é bem maior que a hitbox física dele: metade da altura
+    // do frame sozinha já são ~38px (frame 272px × escala 0.28 ÷ 2). Testado
+    // com `sprite.getBounds()` (desenho inteiro, não só a hitbox): sem
+    // sobreposição em nenhum dos 6 fantasmas do nível.
   }
 
   _updateTrabalho() {
     const p = this.scene.player;
-    if (p && p.isAlive && Math.abs(p.x - this.x) < 380 && Math.abs(p.y - this.y) < 120) {
+    if (p && p.isAlive && this._canAggro() && Math.abs(p.x - this.x) < 380 && Math.abs(p.y - this.y) < 120) {
       // Modo ALERTA: persegue com a mesma detecção de borda da patrulha
       // (_isGroundAhead — usa body.bottom, funciona pra qualquer tamanho)
       const dx = p.x - this.x;
@@ -459,7 +522,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       const dx = p.x - this.x;
       const dy = p.y - this.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 550) {
+      if (this._canAggro() && dist < 550) {
         this.setVelocityX(Math.sign(dx) * this.speed);
         this.setVelocityY(Math.sign(dy) * this.speed * 0.5);
         this.setFlipX(dx < 0);
@@ -470,6 +533,105 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     } else {
       this._patrol();
       this.setVelocityY(0);
+    }
+  }
+
+  _updateSonoAcumulado() {
+    // Sono Acumulado: Fantasma mais rápido e agressivo
+    const t = this.scene.time.now / 1000;
+    this._sonoWanderAngle += 0.024 * Math.sin(t);
+
+    const p = this.scene.player;
+    const dist = (p && p.isAlive) ? Math.hypot(p.x - this.x, p.y - this.y) : Infinity;
+    const chasing = this._canAggro() && dist < 420; // Maior detecção (420 vs 350)
+
+    if (chasing) {
+      const targetAngle = Math.atan2(p.y - this.y, p.x - this.x);
+      const diff = targetAngle - this._sonoWanderAngle;
+      this._sonoWanderAngle += Math.sign(Math.sin(diff)) * 0.08; // Curva mais rápido
+    }
+
+    const vx = Math.cos(this._sonoWanderAngle) * this.speed;
+    const vy = Math.sin(this._sonoWanderAngle) * this.speed * 0.7;
+    this.setVelocity(vx, vy);
+    this.setFlipX(vx < 0);
+
+    if (this.x < this.leftX || this.x > this.rightX) {
+      this._sonoWanderAngle = Math.PI - this._sonoWanderAngle;
+    }
+    const vRange = chasing ? 260 : 25;
+    if (this.y < this.homeY - vRange) this._sonoWanderAngle = Math.abs(this._sonoWanderAngle) % (Math.PI * 2);
+    if (this.y > this.homeY + vRange) this._sonoWanderAngle = -Math.abs(this._sonoWanderAngle);
+  }
+
+  _updateTccMob() {
+    // TCC Comum: terrestre rápido
+    const p = this.scene.player;
+    if (p && p.isAlive && this._canAggro() && Math.abs(p.x - this.x) < 400 && Math.abs(p.y - this.y) < 130) {
+      const dx = p.x - this.x;
+      const dir = Math.sign(dx) || 1;
+      const groundAhead = this._isGroundAhead(dir);
+      if (groundAhead || !this.body.blocked.down) {
+        this.setVelocityX(dir * 190); // Corre muito rápido (190 vs 175)
+        this.setFlipX(dx < 0);
+        if (this.body.blocked.down && p.y < this.y - 30 && Math.random() < 0.03) {
+          this.setVelocityY(-380);
+        }
+      } else {
+        this.setVelocityX(0);
+      }
+    } else {
+      this._patrol();
+    }
+  }
+
+  _updateBossTcc() {
+    // Chefão TCC: Flutua na arena em zigue-zague
+    const t = this.scene.time.now;
+    
+    // Movimento flutuante em zigue-zague
+    const targetY = this.homeY + Math.sin(t / 800) * 80;
+    this.setVelocityY((targetY - this.y) * 4);
+
+    // Patrulha horizontal de arena
+    this._patrol();
+
+    // Atira no jogador
+    const p = this.scene.player;
+    if (p && p.isAlive && t > (this.nextShot ?? 0)) {
+      const dist = Math.hypot(p.x - this.x, p.y - this.y);
+      if (dist < 600) {
+        if (this.scene.spawnBossProjectile) {
+          this.scene.spawnBossProjectile(this, 'tcc');
+        }
+        this.nextShot = t + 1400; // Recarrega
+      }
+    }
+  }
+
+  _updateBossBanca() {
+    // Chefão Banca Avaliadora: Flutua levemente na cadeira/mesa (estacionário no X)
+    const t = this.scene.time.now;
+    
+    const targetY = this.homeY + Math.sin(t / 1200) * 20;
+    this.setVelocityY((targetY - this.y) * 2);
+    this.setVelocityX(0);
+
+    // Vira para o jogador
+    const p = this.scene.player;
+    if (p && p.isAlive) {
+      this.setFlipX(p.x < this.x);
+
+      // Atira no jogador
+      if (t > (this.nextShot ?? 0)) {
+        const dist = Math.hypot(p.x - this.x, p.y - this.y);
+        if (dist < 700) {
+          if (this.scene.spawnBossProjectile) {
+            this.scene.spawnBossProjectile(this, 'banca');
+          }
+          this.nextShot = t + 1800; // Recarrega
+        }
+      }
     }
   }
 

@@ -29,6 +29,14 @@ export class BootScene extends Phaser.Scene {
     this.load.image('stone_tile', 'assets/stone_tile.png');
     this.load.image('stone_platform', 'assets/stone_platform.png');
 
+    // ── Assets gerados por IA para a Fase 3 ──────────────────────────────
+    this.load.spritesheet('enemy_sono_acumulado', 'assets/enemy_sono_acumulado.png', { frameWidth: 225, frameHeight: 564 });
+    this.load.spritesheet('enemy_tcc_mob',        'assets/enemy_tcc_mob.png',        { frameWidth: 236, frameHeight: 308 });
+    this.load.spritesheet('boss_tcc',             'assets/boss_tcc.png',             { frameWidth: 495, frameHeight: 472 });
+    this.load.spritesheet('boss_banca',           'assets/boss_banca.png',           { frameWidth: 504, frameHeight: 454 });
+    this.load.image('canudo', 'assets/canudo.png');
+    this.load.image('capelo', 'assets/capelo.png');
+
     // ── Texturas desenhadas por código (itens, cenário, HUD) ──────────────
     this._makeArtTextures();
   }
@@ -68,6 +76,12 @@ export class BootScene extends Phaser.Scene {
     mk('trabalho-run', 'enemy_trabalho', 8, true);
     mk('calculo-float', 'enemy_calculo', 6, true);
     mk('prova-float', 'enemy_prova', 6, true);
+
+    // Inimigos e Chefes Fase 3
+    mk('sono-acumulado-float', 'enemy_sono_acumulado', 6, true);
+    mk('tcc-mob-run',          'enemy_tcc_mob',        8, true);
+    mk('boss-tcc-float',       'boss_tcc',             6, true);
+    mk('boss-banca-float',     'boss_banca',           6, true);
   }
 
   _makeArtTextures() {

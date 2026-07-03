@@ -157,6 +157,76 @@ class AudioManager {
     this._musicTimer = setInterval(tick, stepDur * 1000);
   }
 
+  // Música Sombria e Assustadora para a Fase 3
+  startScaryMusic() {
+    this.stopMusic();
+    if (!this._ensure()) return;
+    this.musicOn = true;
+    this._step = 0;
+
+    // Escala dissonante escura e assustadora
+    const melody = [
+      110, 0, 116, 0, 98, 0, 110, 0,
+      147, 0, 155, 0, 131, 0, 880, 0  // 880 é um grito/agudo repentino assustador
+    ];
+    const bass = [55, 55, 0, 55, 49, 49, 0, 49]; // Sub-bass ultra pesado e tenso
+    const stepDur = 0.38;
+
+    const tick = () => {
+      if (!this.musicOn) return;
+      const i = this._step;
+      const m = melody[i % melody.length];
+      if (m) {
+        const type = (m === 880) ? 'sawtooth' : 'sine';
+        const vol = (m === 880) ? 0.025 : 0.05;
+        this.tone({ freq: m, dur: stepDur * 0.9, type: type, vol: vol });
+      }
+      const b = bass[i % bass.length];
+      if (b) this.tone({ freq: b, dur: stepDur * 0.5, type: 'triangle', vol: 0.08 });
+      
+      // Efeito de vento uivante / ruído a cada 4 passos
+      if (i % 4 === 2) {
+        this.tone({ freq: 400, slideTo: 100, dur: 0.6, type: 'sawtooth', vol: 0.01 });
+      }
+      this._step++;
+    };
+    tick();
+    this._musicTimer = setInterval(tick, stepDur * 1000);
+  }
+
+  // Música Alegre/Festiva para a Vitória da Formatura
+  startHappyMusic() {
+    this.stopMusic();
+    if (!this._ensure()) return;
+    this.musicOn = true;
+    this._step = 0;
+
+    // Fanfarra alegre em dó maior / escala maior brilhante
+    const melody = [
+      523, 659, 784, 1047, 784, 1047, 1318, 0,
+      880, 1047, 1318, 1568, 1318, 1568, 2093, 0
+    ];
+    const bass = [131, 196, 165, 196, 220, 262, 220, 262];
+    const stepDur = 0.16; // Bem rápida e animada!
+
+    const tick = () => {
+      if (!this.musicOn) return;
+      const i = this._step;
+      const m = melody[i % melody.length];
+      if (m) this.tone({ freq: m, dur: stepDur * 0.85, type: 'triangle', vol: 0.04 });
+      const b = bass[i % bass.length];
+      if (b) this.tone({ freq: b, dur: stepDur * 1.5, type: 'square', vol: 0.035 });
+      
+      // Caixa de bateria (noise simples) nos contra-tempos
+      if (i % 2 === 1) {
+        this.tone({ freq: 1500, dur: 0.02, type: 'square', vol: 0.01 });
+      }
+      this._step++;
+    };
+    tick();
+    this._musicTimer = setInterval(tick, stepDur * 1000);
+  }
+
   toggleMute() {
     this.muted = !this.muted;
     if (this.master) this.master.gain.value = this.muted ? 0 : 0.6;

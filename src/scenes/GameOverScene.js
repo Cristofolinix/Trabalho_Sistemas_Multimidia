@@ -8,6 +8,11 @@ export class GameOverScene extends Phaser.Scene {
 
   init(data) {
     this.char = data?.char;
+    // Fase em que o jogador perdeu as vidas — cada Level*Scene informa a
+    // própria chave ao chamar esta tela (ver _onPlayerDied). Sem isto,
+    // "Tentar Novamente" sempre mandava de volta pra Fase 1, mesmo quem
+    // morreu na Fase 2.
+    this.phase = data?.phase || 'Level1Scene';
   }
 
   create() {
@@ -24,7 +29,7 @@ export class GameOverScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this._btn(W / 2, H / 2 + 40, 'TENTAR NOVAMENTE', 0x27ae60, () => {
-      this.scene.start('Level1Scene', { char: this.char });
+      this.scene.start(this.phase, { char: this.char });
     });
     this._btn(W / 2, H / 2 + 100, 'MENU INICIAL', 0x2980b9, () => {
       this.scene.start('TitleScene');

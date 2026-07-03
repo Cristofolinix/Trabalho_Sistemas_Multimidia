@@ -85,7 +85,7 @@ export class Level2Scene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.door, () => {
       if (this.door.tryEnter(this.keysCollected)) {
         audio.sfx('door');
-        this.scene.start('WinScene'); // Vai para a tela de vitória por enquanto
+        this.scene.start('WinScene', { char: this.selectedChar, graduated: false });
       }
     });
 
@@ -478,7 +478,7 @@ export class Level2Scene extends Phaser.Scene {
     this.cameras.main.shake(400, 0.02);
     this.cameras.main.fade(700, 0, 0, 0);
     this.time.delayedCall(800, () => {
-      this.scene.start('GameOverScene', { char: this.selectedChar });
+      this.scene.start('GameOverScene', { char: this.selectedChar, phase: 'Level2Scene' });
     });
   }
 }
