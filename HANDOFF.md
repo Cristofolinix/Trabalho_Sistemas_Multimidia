@@ -586,3 +586,99 @@ manualmente várias chamadas de `kill()` espaçadas por frames de
 30 chamadas ao longo de ~500ms simulados só descontaram 1hp, confirmando que
 a lógica está certa. **Sempre que possível, testar a LÓGICA isolada com
 `loop.step()` em vez de confiar num teste que depende de Tween/tempo real.**
+
+## ════════════════════════════════════════════════════════════════════════
+## RESOLVIDO NA QUINTA SESSÃO (02/07/2026) — SONO PISCANDO + 3 BUGS NOVOS
+## ════════════════════════════════════════════════════════════════════════
+
+### 1. Fantasma (sono) "piscando" de um lado pro outro parado
+Usuário reportou: parado, o sono fica virando de lado o tempo todo (só para
+quando detecta o jogador). Causa: o estado parado usava o MESMO ângulo livre
+2D do modo perseguição, e a correção de limite vertical (`vRange=20`, bem
+apertado) fazia o ângulo bater nos dois limites (`±20`) em frações de
+segundo sempre que ele apontava perto da vertical — e nesses ângulos
+`vx = cos(ângulo)*speed` fica perto de zero, então o SINAL de vx oscila só
+por arredondamento, e `setFlipX(vx<0)` vira o sprite a cada frame sem ele
+realmente se mover. Corrigido separando o estado PARADO do estado
+PERSEGUINDO: parado agora é uma deriva horizontal de direção CONSTANTE
+(inverte só ao bater em `leftX`/`rightX`) + um balanço vertical senoidal
+puro (sem limite artificial pra "bater e reverter"). `vx` nunca fica perto
+de zero (sempre ±50% da velocidade), e o balanço vertical (±35%) já garante
+sozinho que não sai da folga de 20px sem precisar de correção de ângulo.
+Perseguição continua com o ângulo livre 2D de antes (sem mudança). Testado
+com `loop.step()` puro (400 frames, sem interferência de `scene.time.now`):
+0 flips de `flipX` durante o estado parado.
+
+### 2. "Trabalho em grupo" perseguindo o jogador desde o frame 1 do spawn
+Os 2 inimigos da Seção 1 (`x=300` e `x=620`) ficam bem perto do ponto de
+spawn do jogador (`x=90`) — dentro do alcance de alerta (380px) desde o
+primeiro frame, sem o jogador ter qualquer chance de reagir. Adicionado um
+período de graça: todo `Enemy` novo não pode `_canAggro()` (perseguir/
+alertar) pelos primeiros ~70 frames (~1.2s a 60fps) de vida. Aplicado nos 4
+pontos de detecção que existem (trote-patrulha→chase, trabalho-alerta,
+sono-perseguição, prova-perseguição).
+**Pegadinha grande**: a primeira versão contava o período em MILISSEGUNDOS
+comparando com `scene.time.now` (`this.spawnAt = scene.time.now` no
+construtor). Isso pareceu certo num teste rápido, mas tem 2 problemas sérios
+descobertos só com testes bem mais cuidadosos:
+  1. `create()` da cena roda ANTES do primeiro `Clock.preUpdate` daquele
+     frame — ler `scene.time.now` no construtor pega um valor "não
+     sincronizado" (ver detalhe abaixo).
+  2. **Mais grave**: a `Clock` de uma cena (`this.scene.time`) é o MESMO
+     objeto reaproveitado toda vez que a cena reinicia (`scene.start()`
+     de novo na mesma tela — morrer e "Tentar Novamente", ou trocar de fase
+     no Modo Dev) — ela NÃO zera sozinha entre reinícios. Um inimigo criado
+     num reinício lia `scene.time.now` como o valor "congelado" de quando a
+     cena rodou por último; ao comparar com o tempo atual (bem maior, já
+     que o jogo seguiu rodando enquanto o jogador estava na tela de Game
+     Over/Menu), a diferença já vinha muito acima de 1200ms — ou seja, o
+     período de graça terminava instantaneamente em QUALQUER reinício,
+     reproduzindo exatamente o bug original sempre que o jogador morresse e
+     tentasse de novo.
+Corrigido trocando para contagem em FRAMES (`this.spawnGraceFrames = 70`,
+decrementado 1 por frame em `update()`, `_canAggro()` = `spawnGraceFrames
+<= 0`) — não depende de nenhum relógio acumulado, sempre começa do zero a
+cada `new Enemy(...)`, funciona igual em spawn inicial OU reinício. Testado
+com `loop.step()` limpo (sem misturar `performance.now()` como base, que
+sozinho já causa leituras malucas de `scene.time.now` — ver nota de
+metodologia abaixo): contagem regressiva de 70→0 idêntica tanto na primeira
+ativação da cena quanto simulando um reinício no meio da mesma sessão.
+**Lição de metodologia de teste**: ao usar `window.__game.loop.step(t)`,
+NUNCA alimentar `t` com um valor grande vindo de `performance.now()` (mesmo
+resetando `loop.lastTime = t` antes) — isso produz leituras de
+`scene.time.now` completamente inconsistentes (valores gigantes sem relação
+com o `t` alimentado) por causa de como a `Clock` da cena persiste e
+sincroniza entre `scene.start()` sucessivos. Sempre alimentar `t` a partir
+de uma base pequena e fixa (ex.: `let t = 1000`) para ter um teste limpo e
+determinístico.
+
+### 3. Game Over sempre reiniciava na Fase 1
+`GameOverScene` só sabia voltar pra `Level1Scene`, mesmo quem morreu na Fase
+2. Corrigido: cada `Level*Scene._onPlayerDied()` agora passa a própria chave
+(`phase: 'Level1Scene'`/`'Level2Scene'`) ao chamar `GameOverScene`; ela lê
+`data.phase` (default `'Level1Scene'` por segurança) e usa isso no botão
+"TENTAR NOVAMENTE" em vez do valor fixo.
+
+### 4. Modo Dev (Créditos) pulava a seleção de personagem, sempre entrava como Hugo
+O seletor de fase do Modo Dev chamava `scene.start('Level1Scene'/'Level2Scene',
+{char: defaultChar})` direto, ignorando a tela de seleção. Corrigido: os
+botões agora chamam `scene.start('MenuScene', {targetScene: ph.scene})`;
+`MenuScene.init()` guarda esse `targetScene` (default `'Level1Scene'` pro
+fluxo normal Título→Menu) e `_confirm()` usa `this.targetScene` em vez do
+valor fixo `'Level1Scene'`. Testado ponta a ponta via `loop.step()`:
+Créditos→[Fase 2]→Menu (com `targetScene:'Level2Scene'` correto)→escolhe
+Alex→entra em `Level2Scene` com `selectedChar:'alex'`.
+
+### Nota: edição concorrente do repositório nesta sessão
+Durante esta sessão, o usuário estava trabalhando **em paralelo** (outra
+sessão/terminal) numa Fase 3 completa (`Level3Scene.js`, chefes TCC/Banca,
+tempestade/vento, vitória com capelo/canudo) — os arquivos `main.js`,
+`AudioManager.js`, `BootScene.js`, `CreditsScene.js` foram alterados e
+commitados por ele nesse meio-tempo (commit `65c78df`), incluindo por
+coincidência as correções desta sessão em `GameOverScene.js`/`MenuScene.js`
+(capturadas no mesmo commit dele). Só o fix de `Enemy.js` (item 2 acima)
+ficou pra ser commitado à parte, já que a Fase 3 seguia em edição ativa nos
+outros arquivos no momento do commit. **Se uma sessão futura notar arquivos
+mudando "sozinhos" enquanto trabalha, é sinal de edição concorrente — vale
+checar `git log`/`git status` antes de decidir o que commitar, pra não
+misturar/sobrescrever trabalho em andamento de outra sessão.**
