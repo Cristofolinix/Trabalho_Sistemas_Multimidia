@@ -17,6 +17,7 @@ export class Level3Scene extends Phaser.Scene {
 
   init(data) {
     this.selectedChar = data?.char ?? DEFAULT_CHARACTER;
+    this.devMode = data?.devMode ?? false;
     this.keysCollected = 0;
     this.totalKeys = 3;
     this.bossesSpawned = false;
@@ -49,6 +50,7 @@ export class Level3Scene extends Phaser.Scene {
     const cfg = CHARACTERS[this.selectedChar];
     this.spawnPoint = { x: 90, y: 560 };
     this.player = new Player(this, this.spawnPoint.x, this.spawnPoint.y, cfg);
+    this.player.devMode = this.devMode; // invencível no modo dev
     this.checkpoint = { ...this.spawnPoint };
 
     this.player.cursors = this.input.keyboard.createCursorKeys();
@@ -387,8 +389,8 @@ export class Level3Scene extends Phaser.Scene {
       onComplete: () => txt.destroy()
     });
 
-    // Mudar música para a música de boss rápida/assustadora
-    audio.sfx('select');
+    // Mudar música para a música de boss — acelerada e tensa
+    audio.startBossMusic();
   }
 
   // Fecha o portão de retorno — chamado só depois que o jogador já passou

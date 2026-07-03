@@ -17,6 +17,7 @@ export class Level2Scene extends Phaser.Scene {
 
   init(data) {
     this.selectedChar = data?.char ?? DEFAULT_CHARACTER;
+    this.devMode = data?.devMode ?? false;
     this.keysCollected = 0;
     this.totalKeys = 3;
   }
@@ -41,6 +42,7 @@ export class Level2Scene extends Phaser.Scene {
     const cfg = CHARACTERS[this.selectedChar];
     this.spawnPoint = { x: 90, y: 560 };
     this.player = new Player(this, this.spawnPoint.x, this.spawnPoint.y, cfg);
+    this.player.devMode = this.devMode; // invencível no modo dev
     this.checkpoint = { ...this.spawnPoint };
 
     this.player.cursors = this.input.keyboard.createCursorKeys();

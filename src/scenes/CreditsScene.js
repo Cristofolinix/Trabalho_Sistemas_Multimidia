@@ -67,7 +67,7 @@ export class CreditsScene extends Phaser.Scene {
       }).setOrigin(0.5);
       btn.on('pointerover',  () => btn.setFillStyle(0x2a5a8c, 1));
       btn.on('pointerout',   () => btn.setFillStyle(0x1a3a5c, 1));
-      btn.on('pointerdown',  () => this.scene.start('MenuScene', { targetScene: ph.scene }));
+      btn.on('pointerdown',  () => this.scene.start('MenuScene', { targetScene: ph.scene, devMode: true }));
     });
 
     const back = this.add.rectangle(W / 2, H - 30, 220, 36, 0x7f8c8d, 0.9)

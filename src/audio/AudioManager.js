@@ -210,6 +210,54 @@ class AudioManager {
     this._musicTimer = setInterval(tick, stepDur * 1000);
   }
 
+  // Música de Boss: rápida e tensa para a batalha final — escala menor
+  // frígica acelerada (BPM ~180), baixo pesado pulsante, acentos de percussão
+  // nos contra-tempos e stabs dissonantes aleatórios. Mais veloz que a
+  // startScaryMusic mas mantendo o clima de tensão máxima.
+  startBossMusic() {
+    this.stopMusic();
+    if (!this._ensure()) return;
+    this.musicOn = true;
+    this._step = 0;
+
+    // Melodia frígica acelerada (modo menor com segundo grau rebaixado —
+    // som característico de "perigo iminente" em trilhas de ação).
+    const melody = [
+      220, 233, 196, 220, 175, 196, 165, 196,
+      220, 175, 196, 165, 147, 175, 196, 220,
+    ];
+    // Baixo pulsante e pesado: cada nota dura pouco, cria sensação de urgência
+    const bass = [55, 0, 58, 0, 55, 0, 49, 55, 0, 58, 55, 0, 49, 0, 55, 0];
+    const stepDur = 0.14; // ~180 BPM — veloz, quase frenético
+
+    const tick = () => {
+      if (!this.musicOn) return;
+      const i = this._step;
+      const m = melody[i % melody.length];
+      if (m) {
+        this.tone({ freq: m, dur: stepDur * 0.85, type: 'sawtooth', vol: 0.07 });
+        // segunda voz levemente desafinada (tensão)
+        this.tone({ freq: m * 1.03, dur: stepDur * 0.7, type: 'square', vol: 0.025 });
+      }
+      const b = bass[i % bass.length];
+      if (b) this.tone({ freq: b, dur: stepDur * 0.5, type: 'square', vol: 0.10 });
+
+      // Percussão nos contra-tempos (soa como batida de snare agressiva)
+      if (i % 2 === 1) this.tone({ freq: 3000, dur: 0.025, type: 'square', vol: 0.018 });
+
+      // Bombo pesado na cabeça dos compassos (a cada 8 passos)
+      if (i % 8 === 0) this.tone({ freq: 50, slideTo: 25, dur: 0.45, type: 'square', vol: 0.12 });
+
+      // Stab dissonante imprevisível (aumenta o desconforto)
+      if (Math.random() < 0.04) {
+        this.tone({ freq: 880, slideTo: 300, dur: 0.3, type: 'sawtooth', vol: 0.1 });
+      }
+      this._step++;
+    };
+    tick();
+    this._musicTimer = setInterval(tick, stepDur * 1000);
+  }
+
   // Música Alegre/Festiva para a Vitória da Formatura
   startHappyMusic() {
     this.stopMusic();

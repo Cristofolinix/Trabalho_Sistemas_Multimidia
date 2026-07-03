@@ -43,6 +43,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.abilityCooldown = 0;
     this.abilityMaxCooldown = config.abilityCooldown ?? 1500;
 
+    // Modo Desenvolvedor: quando true, o jogador nunca perde HP.
+    // Ativado automaticamente ao usar o seletor de fase em Créditos.
+    this.devMode = false;
+
     // ── Estados especiais causados por inimigos ──────────────────────────
     // Náusea (vômito do zumbi): enquanto > 0, os controles esquerda/direita
     // ficam invertidos e a câmera balança (efeito tratado na cena).
@@ -339,6 +343,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   takeDamage(amount = 1) {
+    // Modo Dev (seletor de fase em Créditos): invencibilidade total
+    if (this.devMode) {
+      // Pulsa a cor azulada para sinalizar que o dano foi absorvido
+      this.setTint(0x00ccff);
+      this.scene.time.delayedCall(120, () => this.clearTint());
+      return;
+    }
     if (this.invincible || !this.isAlive) return;
     this.hp -= amount;
     audio.sfx('hurt');
